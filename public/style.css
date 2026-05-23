@@ -169,20 +169,25 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 }
 
 .chain {
-  background: #0e2e1e;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.04), transparent 60%),
+    radial-gradient(circle at 70% 80%, rgba(0,0,0,0.18), transparent 60%),
+    linear-gradient(135deg, #14533a, #0c3724);
   border: 1px solid #2a5a3a;
-  border-radius: 6px;
-  padding: 0.8rem;
-  min-height: 70px;
+  border-radius: 8px;
+  padding: 1rem 0.8rem;
+  min-height: 90px;
   max-width: 100%;
   text-align: center;
-  line-height: 0;          /* sin huecos verticales raros entre fichas */
-  overflow: hidden;        /* protección extra contra desbordes */
+  line-height: 0;
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
 }
 .chain:empty::before {
   content: '(mesa vacía)';
-  color: #888;
+  color: #6a8a78;
   line-height: 1.2;
+  font-style: italic;
 }
 
 .hand-section { margin-top: 1rem; }
@@ -231,13 +236,18 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 
 .domino {
   display: inline-flex;
-  background: #f6f1de;
-  border: 2px solid #3a2d18;
+  background:
+    linear-gradient(145deg, #fbf6e1 0%, #ebe2c5 100%);
+  border: 1.5px solid #3a2d18;
   border-radius: 5px;
-  box-shadow: 0 2px 3px rgba(0,0,0,0.4);
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.7),
+    inset 0 -1px 2px rgba(0,0,0,0.08);
   vertical-align: middle;
   margin: 2px;
   flex-shrink: 0;
+  position: relative;
 }
 
 .domino.h {
@@ -249,6 +259,27 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   flex-direction: column;
   width: 50px;
   height: 100px;
+}
+
+/* Dobles en la cadena: se colocan perpendiculares como en el dominó real */
+.domino.h.double {
+  flex-direction: column;
+  width: 40px;
+  height: 80px;
+}
+
+/* Última ficha jugada: animación de entrada + halo */
+@keyframes tile-pop {
+  0%   { transform: scale(0.5) rotate(-3deg); opacity: 0; }
+  60%  { transform: scale(1.08) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.domino.last-played {
+  animation: tile-pop 0.35s ease-out;
+  box-shadow:
+    0 0 0 2px #ffd24a,
+    0 2px 6px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.7);
 }
 
 .domino-half {
@@ -266,6 +297,12 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 .domino.v .domino-half:first-child {
   border-bottom: 1.5px solid #3a2d18;
 }
+/* Los dobles tienen flex-direction column aunque sean .h, así que necesitan
+   border horizontal en vez de vertical entre mitades. */
+.domino.h.double .domino-half:first-child {
+  border-right: none;
+  border-bottom: 1.5px solid #3a2d18;
+}
 
 .dot {
   width: 7px;
@@ -278,26 +315,39 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 
 /* Botón de ficha en la mano (es un button con la misma anatomía) */
 .tile-btn {
-  background: #f6f1de;
-  border: 2px solid #3a2d18;
+  background: linear-gradient(145deg, #fbf6e1 0%, #ebe2c5 100%);
+  border: 1.5px solid #3a2d18;
   border-radius: 5px;
   padding: 0;
   margin: 0;
   cursor: pointer;
-  box-shadow: 0 2px 3px rgba(0,0,0,0.4);
+  box-shadow:
+    0 3px 5px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.7);
   width: 56px;
   height: 110px;
   min-height: 110px;
   display: inline-flex;
   flex-direction: column;
   flex-shrink: 0;
-  transition: transform 0.08s ease;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
-.tile-btn:hover:not(:disabled) { transform: translateY(-3px); }
-.tile-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.tile-btn:hover:not(:disabled) {
+  transform: translateY(-5px);
+  box-shadow:
+    0 8px 10px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.7);
+}
+.tile-btn:active:not(:disabled) {
+  transform: translateY(-2px);
+}
+.tile-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .tile-btn.playable {
   border-color: #3b7;
-  box-shadow: 0 0 0 2px rgba(60,200,140,0.4), 0 2px 3px rgba(0,0,0,0.4);
+  box-shadow:
+    0 0 0 2px rgba(60,200,140,0.5),
+    0 3px 5px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.7);
 }
 
 /* Tipo "texto" — solo para el log (compacto) */
@@ -358,6 +408,7 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 @media (max-width: 600px) {
   /* Fichas un pelín más pequeñas en móvil */
   .domino.h { width: 68px; height: 34px; }
+  .domino.h.double { width: 34px; height: 68px; }
   .domino.v { width: 44px; height: 88px; }
   .dot { width: 6px; height: 6px; }
   .tile-btn { width: 50px; height: 100px; min-height: 100px; }
@@ -376,6 +427,7 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 
 @media (max-width: 380px) {
   .domino.h { width: 60px; height: 30px; }
+  .domino.h.double { width: 30px; height: 60px; }
   .tile-btn { width: 44px; height: 88px; min-height: 88px; }
   .domino.v { width: 40px; height: 80px; }
 }

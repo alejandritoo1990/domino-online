@@ -118,6 +118,7 @@ function startGame(room) {
   room.log = [];
   room.consecutivePasses = 0;
   room.starterTile = starter.tile;
+  room.lastMove = null;
 }
 
 module.exports = {

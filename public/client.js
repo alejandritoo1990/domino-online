@@ -107,9 +107,13 @@
   }
 
   // Crea un elemento de ficha visual (no clickeable). orientation: 'h' | 'v'.
+  // Los dobles en orientación horizontal se renderizan perpendiculares (clase
+  // 'double'), como en el dominó real.
   function makeTileEl(tile, orientation) {
     const el = document.createElement('div');
-    el.className = 'domino ' + orientation;
+    let cls = 'domino ' + orientation;
+    if (orientation === 'h' && tile[0] === tile[1]) cls += ' double';
+    el.className = cls;
     el.appendChild(makeHalf(tile[0]));
     el.appendChild(makeHalf(tile[1]));
     el.setAttribute('aria-label', tileTxt(tile));
@@ -135,10 +139,14 @@
   }
 
   // ===== Renderizado =====
-  function renderChain(chain, ends) {
+  function renderChain(chain, ends, lastMove) {
     chainEl.innerHTML = '';
-    chain.forEach((t) => {
-      chainEl.appendChild(makeTileEl(t, 'h'));
+    chain.forEach((t, i) => {
+      const el = makeTileEl(t, 'h');
+      if (lastMove && lastMove.index === i) {
+        el.classList.add('last-played');
+      }
+      chainEl.appendChild(el);
     });
     endLeftEl.textContent = ends.left === null ? '-' : ends.left;
     endRightEl.textContent = ends.right === null ? '-' : ends.right;
@@ -204,7 +212,8 @@
 
   function openEndSelector(tile) {
     pendingTile = tile;
-    endSelectorTile.textContent = tileTxt(tile);
+    endSelectorTile.innerHTML = '';
+    endSelectorTile.appendChild(makeTileEl(tile, 'h'));
     endSelector.classList.remove('hidden');
   }
   function closeEndSelector() {
@@ -308,7 +317,7 @@
 
   socket.on('game_started', (state) => {
     showView('game');
-    renderChain(state.chain, state.ends);
+    renderChain(state.chain, state.ends, state.lastMove);
     renderPlayers(state.players, state.turn);
     renderLog(state.log);
     updateTurnIndicator(state.turn, state.players);
@@ -320,7 +329,7 @@
         views.over.classList.contains('hidden')) {
       showView('game');
     }
-    renderChain(state.chain, state.ends);
+    renderChain(state.chain, state.ends, state.lastMove);
     renderPlayers(state.players, state.turn);
     renderLog(state.log);
     updateTurnIndicator(state.turn, state.players);

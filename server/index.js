@@ -69,6 +69,7 @@ function publicGameState(room) {
       tilesLeft: p.hand.length,
     })),
     log: room.log,
+    lastMove: room.lastMove || null,
   };
 }
 
@@ -213,6 +214,15 @@ io.on('connection', (socket) => {
     }
     game.removeTile(player.hand, tile);
     room.consecutivePasses = 0;
+
+    // Guardamos la última jugada para que el cliente la pueda resaltar.
+    room.lastMove = {
+      tile: placed,
+      end: chosenEnd,
+      index: chosenEnd === 'left' ? 0 : room.chain.length - 1,
+      player: playerIdx,
+      playerName: player.name,
+    };
 
     const sideTxt = room.chain.length === 1 ? 'en la mesa' :
       (chosenEnd === 'left' ? 'a la izquierda' : 'a la derecha');
