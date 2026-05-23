@@ -18,6 +18,7 @@
   // Lobby
   const nameInput = document.getElementById('name');
   const codeInput = document.getElementById('code');
+  const modeSelect = document.getElementById('mode');
   const btnCreate = document.getElementById('btn-create');
   const btnJoin = document.getElementById('btn-join');
   const errorEl = document.getElementById('error');
@@ -37,6 +38,9 @@
   const endRightEl = document.getElementById('end-right');
   const handEl = document.getElementById('hand');
   const btnPass = document.getElementById('btn-pass');
+  const btnDraw = document.getElementById('btn-draw');
+  const boneyardInfo = document.getElementById('boneyard-info');
+  const boneyardCountEl = document.getElementById('boneyard-count');
   const endSelector = document.getElementById('end-selector');
   const endSelectorTile = document.getElementById('end-selector-tile');
   const btnPlayLeft = document.getElementById('btn-play-left');
@@ -72,6 +76,7 @@
   let countdownTimer = null;
   let countdownDeadline = 0;
   let targetScore = 100;
+  let maxPlayers = 4;
 
   // ===== Utilidades =====
   function showView(name) {
@@ -282,9 +287,10 @@
     const name = nameInput.value.trim();
     if (!name) { showError('Ingresa tu nombre'); return; }
     myName = name;
+    const mode = (modeSelect && modeSelect.value === '2p') ? '2p' : '4p';
     btnCreate.disabled = true;
     btnJoin.disabled = true;
-    socket.emit('create_room', { name });
+    socket.emit('create_room', { name, mode });
   });
 
   btnJoin.addEventListener('click', () => {
@@ -315,6 +321,10 @@
 
   btnPass.addEventListener('click', () => {
     socket.emit('pass_turn');
+  });
+
+  btnDraw.addEventListener('click', () => {
+    socket.emit('draw_tile');
   });
 
   btnHome.addEventListener('click', () => {
@@ -350,10 +360,11 @@
   }
 
   // ===== Eventos socket =====
-  socket.on('room_joined', ({ code, yourName }) => {
+  socket.on('room_joined', ({ code, yourName, maxPlayers: mp }) => {
     myCode = code;
     myName = yourName;
     hasJoined = true;
+    if (mp) maxPlayers = mp;
     roomCodeEl.textContent = code;
     gameCodeEl.textContent = code;
     setUrl(code);
@@ -363,6 +374,7 @@
   socket.on('room_update', (state) => {
     roomCodeEl.textContent = state.code;
     gameCodeEl.textContent = state.code;
+    if (state.maxPlayers) maxPlayers = state.maxPlayers;
     // Si seguimos en lobby por algún motivo (caso raro), saltamos a waiting.
     if (state.status === 'waiting' && hasJoined) {
       // Actualizar lista de jugadores en sala de espera.
@@ -374,7 +386,8 @@
         if (!p.connected) li.classList.add('disconnected');
         waitingPlayersEl.appendChild(li);
       });
-      for (let i = state.players.length; i < 4; i++) {
+      const slots = state.maxPlayers || maxPlayers;
+      for (let i = state.players.length; i < slots; i++) {
         const li = document.createElement('li');
         li.textContent = '(esperando...)';
         li.style.opacity = '0.5';
@@ -398,6 +411,13 @@
     if (state.targetScore) {
       targetScoreEl.textContent = state.targetScore;
       targetScore = state.targetScore;
+    }
+    // Pozo visible solo si hay (modo 2p mientras quedan fichas)
+    if (state.boneyardCount && state.boneyardCount > 0) {
+      boneyardInfo.classList.remove('hidden');
+      boneyardCountEl.textContent = state.boneyardCount;
+    } else {
+      boneyardInfo.classList.add('hidden');
     }
   }
 
@@ -423,10 +443,20 @@
     applyGameState(state);
   });
 
-  socket.on('hand_update', ({ hand, yourTurn: yt, canPass }) => {
+  socket.on('hand_update', ({ hand, yourTurn: yt, canPass, canDraw }) => {
     lastHand = hand;
     yourTurn = yt;
-    btnPass.disabled = !(yt && canPass);
+    // Si se puede robar (hay pozo), mostramos botón Robar y ocultamos Pasar.
+    // Cuando se agota el pozo, mostramos Pasar.
+    if (canDraw) {
+      btnDraw.classList.remove('hidden');
+      btnDraw.disabled = !yt;
+      btnPass.classList.add('hidden');
+    } else {
+      btnDraw.classList.add('hidden');
+      btnPass.classList.remove('hidden');
+      btnPass.disabled = !(yt && canPass);
+    }
     if (!yt) closeEndSelector();
     renderHand();
     if (yt) {
@@ -469,7 +499,7 @@
   });
 
   socket.on('ready_update', ({ ready }) => {
-    btnReady.textContent = `Listo (${ready.length}/4)`;
+    btnReady.textContent = `Listo (${ready.length}/${maxPlayers})`;
   });
 
   // Fin de partida real: alguien alcanzó la meta.

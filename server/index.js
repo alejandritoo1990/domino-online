@@ -47,6 +47,8 @@ function publicRoomState(room) {
   return {
     code: room.code,
     status: room.status,
+    mode: room.mode,
+    maxPlayers: room.maxPlayers,
     players: room.players.map(p => ({
       name: p.name,
       connected: p.connected,
@@ -73,9 +75,12 @@ function publicGameState(room) {
     })),
     log: room.log,
     lastMove: room.lastMove || null,
-    scoreboard: room.scoreboard || [0, 0, 0, 0],
+    scoreboard: room.scoreboard || new Array(room.maxPlayers).fill(0),
     targetScore: room.targetScore || 100,
     roundNumber: room.roundNumber || 1,
+    mode: room.mode,
+    maxPlayers: room.maxPlayers,
+    boneyardCount: (room.boneyard || []).length,
   };
 }
 
@@ -87,16 +92,21 @@ function emitGameState(room) {
   io.to(room.code).emit('game_state', publicGameState(room));
   // Además, a cada jugador le mandamos su mano privada con info de jugadas válidas.
   const ends = game.getEnds(room.chain);
+  const boneyardEmpty = (room.boneyard || []).length === 0;
   for (const p of room.players) {
     if (!p.connected) continue;
     const handWithPlay = p.hand.map(t => ({
       tile: t,
       canPlay: game.canPlay(t, ends),
     }));
+    const hasPlay = game.hasAnyPlay(p.hand, ends);
     io.to(p.socketId).emit('hand_update', {
       hand: handWithPlay,
       yourTurn: room.players[room.turn].socketId === p.socketId,
-      canPass: !game.hasAnyPlay(p.hand, ends),
+      // Solo se puede pasar si no hay jugada Y el pozo está vacío
+      canPass: !hasPlay && boneyardEmpty,
+      // Se puede robar si no hay jugada Y queda pozo
+      canDraw: !hasPlay && !boneyardEmpty,
     });
   }
 }
@@ -126,7 +136,7 @@ function finishRound(room, winnerIdx, reason) {
     points: game.handPoints(p.hand),
     tilesLeft: p.hand.length,
   }));
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < room.maxPlayers; i++) {
     if (i !== winnerIdx) pointsAwarded += perPlayer[i].points;
   }
   room.scoreboard[winnerIdx] += pointsAwarded;
@@ -176,15 +186,21 @@ function finishRound(room, winnerIdx, reason) {
 
 io.on('connection', (socket) => {
 
-  socket.on('create_room', ({ name }) => {
+  socket.on('create_room', ({ name, mode }) => {
     const cleanName = (name || '').toString().trim().slice(0, 20);
     if (!cleanName) {
       socket.emit('error_msg', { message: 'Nombre inválido' });
       return;
     }
-    const room = roomsMod.createRoom(cleanName, socket.id);
+    const cleanMode = (mode === '2p') ? '2p' : '4p';
+    const room = roomsMod.createRoom(cleanName, socket.id, cleanMode);
     socket.join(room.code);
-    socket.emit('room_joined', { code: room.code, yourName: cleanName });
+    socket.emit('room_joined', {
+      code: room.code,
+      yourName: cleanName,
+      mode: room.mode,
+      maxPlayers: room.maxPlayers,
+    });
     emitRoomUpdate(room);
   });
 
@@ -219,14 +235,20 @@ io.on('connection', (socket) => {
       return;
     }
     socket.join(result.room.code);
-    socket.emit('room_joined', { code: result.room.code, yourName: cleanName });
+    socket.emit('room_joined', {
+      code: result.room.code,
+      yourName: cleanName,
+      mode: result.room.mode,
+      maxPlayers: result.room.maxPlayers,
+    });
     emitRoomUpdate(result.room);
 
     if (result.reconnected) {
       // Avisamos a todos y reenviamos estado al reconectado.
       io.to(result.room.code).emit('player_reconnected', { name: cleanName });
       emitGameState(result.room);
-    } else if (result.room.players.length === 4 && result.room.status === 'waiting') {
+    } else if (result.room.players.length === result.room.maxPlayers &&
+               result.room.status === 'waiting') {
       // Arrancamos automáticamente.
       beginGame(result.room);
     }
@@ -323,11 +345,46 @@ io.on('connection', (socket) => {
       socket.emit('invalid_move', { reason: 'Tienes jugadas válidas, no puedes pasar' });
       return;
     }
+    if (room.boneyard && room.boneyard.length > 0) {
+      socket.emit('invalid_move', { reason: 'Aún hay fichas en el pozo, debes robar' });
+      return;
+    }
     room.log.push(`${player.name} pasó`);
     room.consecutivePasses += 1;
     advanceTurn(room);
     emitGameState(room);
     checkBlocked(room);
+  });
+
+  // Robar una ficha del pozo (modo 2p o cualquier sala con pozo).
+  socket.on('draw_tile', () => {
+    const room = roomsMod.getRoomBySocket(socket.id);
+    if (!room || room.status !== 'playing') {
+      socket.emit('invalid_move', { reason: 'No estás en una partida activa' });
+      return;
+    }
+    const playerIdx = roomsMod.getPlayerIndex(room, socket.id);
+    if (playerIdx !== room.turn) {
+      socket.emit('invalid_move', { reason: 'No es tu turno' });
+      return;
+    }
+    if (!room.boneyard || room.boneyard.length === 0) {
+      socket.emit('invalid_move', { reason: 'No hay fichas en el pozo' });
+      return;
+    }
+    const player = room.players[playerIdx];
+    const ends = game.getEnds(room.chain);
+    if (game.hasAnyPlay(player.hand, ends)) {
+      socket.emit('invalid_move', { reason: 'Tienes jugadas válidas, no puedes robar' });
+      return;
+    }
+    // Tomamos una ficha del pozo.
+    const drawn = room.boneyard.shift();
+    player.hand.push(drawn);
+    room.log.push(`${player.name} robó una ficha del pozo (${room.boneyard.length} restantes)`);
+
+    // No avanzamos turno: el jugador puede seguir robando o jugar lo que sacó.
+    emitGameState(room);
   });
 
   socket.on('ready_for_next_round', () => {
@@ -413,18 +470,20 @@ io.on('connection', (socket) => {
 // Nota: si todos están desconectados, no entra en bucle infinito porque la sala
 // se habría cancelado antes.
 function advanceTurn(room) {
-  room.turn = (room.turn + 1) % 4;
+  room.turn = (room.turn + 1) % room.maxPlayers;
 }
 
-// Detecta trancado: si todos pasaron en su última oportunidad o nadie tiene jugada.
+// Detecta trancado: nadie puede jugar Y el pozo está vacío.
 function checkBlocked(room) {
   if (room.status !== 'playing') return;
   const ends = game.getEnds(room.chain);
+  const boneyardEmpty = (room.boneyard || []).length === 0;
+  if (!boneyardEmpty) return;  // en modo 2p, mientras haya pozo no se tranca
   if (game.isBlocked(room.players.map(p => p.hand), ends)) {
     // En trancado gana quien tiene menos puntos en mano.
     let minPts = Infinity;
     let winnerIdx = 0;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < room.maxPlayers; i++) {
       const pts = game.handPoints(room.players[i].hand);
       if (pts < minPts) {
         minPts = pts;

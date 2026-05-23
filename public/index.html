@@ -17,6 +17,12 @@
       <label for="name">Tu nombre</label>
       <input type="text" id="name" maxlength="20" placeholder="Ej: Pedro" autocomplete="off">
 
+      <label for="mode">Modo</label>
+      <select id="mode" class="select-mode">
+        <option value="4p">4 jugadores</option>
+        <option value="2p">2 jugadores (1v1 con pozo)</option>
+      </select>
+
       <div class="row">
         <button id="btn-create">Crear sala</button>
       </div>
@@ -63,6 +69,7 @@
         <div class="ends-info">
           <span>Izq: <strong id="end-left">-</strong></span>
           <span>Der: <strong id="end-right">-</strong></span>
+          <span id="boneyard-info" class="boneyard-info hidden">Pozo: <strong id="boneyard-count">0</strong></span>
         </div>
         <div id="table-chain" class="chain"></div>
 
@@ -70,6 +77,7 @@
           <h3>Tu mano</h3>
           <div id="hand" class="hand"></div>
           <div class="actions">
+            <button id="btn-draw" class="hidden" disabled>Robar del pozo</button>
             <button id="btn-pass" disabled>Pasar</button>
           </div>
           <div id="end-selector" class="end-selector hidden">

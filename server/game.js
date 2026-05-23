@@ -22,14 +22,18 @@ function shuffle(deck) {
   return deck;
 }
 
-// Reparte 7 fichas a cada uno de los 4 jugadores.
-function deal() {
+// Reparte 7 fichas a cada uno de los N jugadores y deja el resto en un "pozo"
+// (boneyard) para robar en modos 1v1. En modo 4 jugadores el pozo queda vacío
+// porque 4 * 7 = 28 = todas las fichas.
+function deal(numPlayers) {
   const deck = shuffle(createDeck());
-  const hands = [[], [], [], []];
-  for (let i = 0; i < 28; i++) {
-    hands[i % 4].push(deck[i]);
+  const hands = [];
+  for (let i = 0; i < numPlayers; i++) hands.push([]);
+  for (let i = 0; i < 7 * numPlayers; i++) {
+    hands[i % numPlayers].push(deck[i]);
   }
-  return hands;
+  const boneyard = deck.slice(7 * numPlayers);
+  return { hands, boneyard };
 }
 
 // Encuentra el índice del jugador que tiene el doble 6.

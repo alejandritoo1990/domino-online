@@ -20,17 +20,21 @@ function generateCode() {
   return code;
 }
 
-function createRoom(name, socketId) {
+function createRoom(name, socketId, mode) {
+  const maxPlayers = (mode === '2p') ? 2 : 4;
   const code = generateCode();
   const room = {
     code,
+    mode: maxPlayers === 2 ? '2p' : '4p',
+    maxPlayers,
     players: [{ socketId, name, connected: true, hand: [] }],
-    status: 'waiting',          // 'waiting' | 'playing' | 'finished' | 'cancelled'
-    chain: [],                  // cadena de fichas en la mesa
-    turn: 0,                    // índice del jugador en turno
-    log: [],                    // historial de movimientos (strings)
+    status: 'waiting',          // 'waiting' | 'playing' | 'round_summary' | 'finished' | 'cancelled'
+    chain: [],
+    boneyard: [],               // pozo de fichas para robar (solo modo 2p)
+    turn: 0,
+    log: [],
     consecutivePasses: 0,
-    disconnectTimers: new Map(),// playerIdx -> Timeout
+    disconnectTimers: new Map(),
   };
   rooms.set(code, room);
   socketToRoom.set(socketId, code);
@@ -62,7 +66,7 @@ function joinRoom(code, name, socketId) {
 
   if (room.status === 'playing') return { error: 'La partida ya empezó' };
   if (room.status !== 'waiting') return { error: 'La sala no acepta jugadores' };
-  if (room.players.length >= 4) return { error: 'La sala está llena' };
+  if (room.players.length >= room.maxPlayers) return { error: 'La sala está llena' };
   if (room.players.some(p => p.name === name)) {
     return { error: 'Ese nombre ya está en uso en la sala' };
   }
@@ -108,7 +112,7 @@ function deleteRoom(code) {
 // Inicializa la partida (primera mano). Setea scoreboard, meta y arranca ronda 1
 // usando el doble 6 (o doble más alto disponible) para decidir quién empieza.
 function initGame(room) {
-  room.scoreboard = [0, 0, 0, 0];
+  room.scoreboard = new Array(room.maxPlayers).fill(0);
   room.targetScore = 100;
   room.roundNumber = 0;
   room.log = [];
@@ -119,10 +123,11 @@ function initGame(room) {
 // Arranca una mano. Si starterPlayer es null, usa doble 6 (primera mano);
 // si no, ese jugador empieza con la ficha que quiera (ganador de mano previa).
 function startRound(room, starterPlayer) {
-  const hands = game.deal();
-  for (let i = 0; i < 4; i++) {
+  const { hands, boneyard } = game.deal(room.maxPlayers);
+  for (let i = 0; i < room.maxPlayers; i++) {
     room.players[i].hand = hands[i];
   }
+  room.boneyard = boneyard;
 
   let turn, starterTile;
   if (starterPlayer === null) {
