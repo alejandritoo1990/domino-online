@@ -60,11 +60,12 @@
     </header>
 
     <div class="game-main">
-      <div class="left-col">
-        <h3>Jugadores</h3>
-        <ul id="players-list" class="player-list"></ul>
+      <!-- Barra superior con chips de jugadores -->
+      <div class="players-bar">
+        <ul id="players-list" class="players-chips"></ul>
       </div>
 
+      <!-- Mesa principal (vista aérea, grande) -->
       <div class="center-col">
         <div class="ends-info">
           <span>Izq: <strong id="end-left">-</strong></span>
@@ -74,12 +75,14 @@
         <div id="table-chain" class="chain"></div>
 
         <div class="hand-section">
-          <h3>Tu mano</h3>
-          <div id="hand" class="hand"></div>
-          <div class="actions">
-            <button id="btn-draw" class="hidden" disabled>Robar del pozo</button>
-            <button id="btn-pass" disabled>Pasar</button>
+          <div class="hand-header">
+            <span>Tu mano</span>
+            <div class="actions">
+              <button id="btn-draw" class="hidden" disabled>Robar del pozo</button>
+              <button id="btn-pass" disabled>Pasar</button>
+            </div>
           </div>
+          <div id="hand" class="hand"></div>
           <div id="end-selector" class="end-selector hidden">
             <p>¿Dónde jugar <span id="end-selector-tile"></span>?</p>
             <button id="btn-play-left">← Izquierda</button>
@@ -89,9 +92,12 @@
         </div>
       </div>
 
+      <!-- Log lateral en desktop, debajo en mobile -->
       <div class="right-col">
-        <h3>Historial</h3>
-        <ol id="log" class="log"></ol>
+        <details open class="log-details">
+          <summary>Historial</summary>
+          <ol id="log" class="log"></ol>
+        </details>
       </div>
     </div>
   </section>

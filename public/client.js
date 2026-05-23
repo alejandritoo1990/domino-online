@@ -176,8 +176,25 @@
     players.forEach((p, i) => {
       const li = document.createElement('li');
       const youMark = p.name === myName ? ' (tú)' : '';
-      const scoreTxt = (p.score !== undefined) ? ` · ${p.score} pts` : '';
-      li.textContent = `${p.name}${youMark} — ${p.tilesLeft} fichas${scoreTxt}`;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'pc-name';
+      nameSpan.textContent = p.name + youMark;
+
+      const tilesSpan = document.createElement('span');
+      tilesSpan.className = 'pc-tiles';
+      tilesSpan.textContent = `${p.tilesLeft}f`;
+
+      li.appendChild(nameSpan);
+      li.appendChild(tilesSpan);
+
+      if (p.score !== undefined) {
+        const scoreSpan = document.createElement('span');
+        scoreSpan.className = 'pc-score';
+        scoreSpan.textContent = p.score;
+        li.appendChild(scoreSpan);
+      }
+
       if (i === turnIdx) li.classList.add('current-turn');
       if (!p.connected) li.classList.add('disconnected');
       if (p.name === myName) li.classList.add('you');
