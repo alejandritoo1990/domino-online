@@ -201,19 +201,21 @@
     const chainW = chainEl.clientWidth || 800;
     const maxX = chainW - padding;
     const minX = padding;
+    // Offset vertical para que los dobles centrados (que se extienden VH/2
+    // arriba y abajo de la línea media de la fila) entren sin recortarse.
+    const dobleHalfExtra = (VH - HH) / 2;
 
     // Calcular posiciones de cada ficha.
     const positions = [];
-    let curX = padding;   // 'right' → borde izquierdo del próximo; 'left' → borde derecho
-    let curY = padding;
+    let curX = padding;
+    let curY = padding + dobleHalfExtra;  // línea media de la fila a padding + VH/2
     let dir = 'right';
+    let justAfterCorner = false;
 
     for (let i = 0; i < chain.length; i++) {
       const tile = chain[i];
       const isDouble = tile[0] === tile[1];
 
-      // Tamaño según orientación deseada en la dirección horizontal actual.
-      // Dobles van perpendiculares a la cadena (verticales mini).
       let tw, th, orient;
       if (isDouble) {
         tw = VW; th = VH; orient = 'h-double';
@@ -227,43 +229,49 @@
       if (dir === 'left'  && curX - tw < minX) overflow = true;
 
       if (overflow) {
-        // Esta ficha pasa a ser la esquina vertical (entre la fila previa y la
-        // siguiente). Tamaño V y se pega al extremo de la última ficha colocada.
+        // Esta ficha pasa a ser la corner vertical, pegada al extremo de la
+        // última ficha colocada.
         tw = VW; th = VH; orient = 'v';
         const lastP = positions[positions.length - 1];
         let vx, vy;
         if (dir === 'right') {
-          vx = lastP.x + lastP.tw - VW;  // borde derecho de V = borde derecho de lastP
+          vx = lastP.x + lastP.tw - VW;
         } else {
-          vx = lastP.x;                  // borde izquierdo de V = borde izquierdo de lastP
+          vx = lastP.x;
         }
-        vy = lastP.y + lastP.th;          // V justo debajo de lastP
+        // La V se pega al borde inferior natural de la fila (no al bottom de
+        // un doble centrado), para que las cornerizadas siempre se alineen
+        // bien al "borde de la fila".
+        vy = curY + HH;
         positions.push({ tile, x: vx, y: vy, tw, th, orient, idx: i, flipped: false });
 
-        // Configurar cursor para la siguiente fila (dirección opuesta).
+        // Cursor para la siguiente fila (dirección opuesta).
         const newDir = (dir === 'right') ? 'left' : 'right';
         curY = vy + VH;
-        if (newDir === 'right') curX = vx;        // próximo borde izquierdo
-        else                    curX = vx + VW;   // próximo borde derecho (anchor)
+        if (newDir === 'right') curX = vx;
+        else                    curX = vx + VW;
         dir = newDir;
+        justAfterCorner = true;
         continue;
       }
 
-      // Coloca la ficha en cursor. Las fichas en dirección 'left' se rotan
-      // 180° para que sus pips conecten visualmente con la corner V y entre sí.
+      // Centramos los dobles del MEDIO de la fila sobre la línea media (para
+      // que la "línea del centro" del doble caiga al nivel del pip que toca).
+      // Excepción: la primera ficha tras una corner se mantiene al borde
+      // superior de la fila, para apilarse directo bajo la corner V sin gap.
+      let tileY = curY;
+      if (orient === 'h-double' && !justAfterCorner) {
+        tileY = curY - dobleHalfExtra;  // mueve el doble 20px hacia arriba
+      }
+
       const tileX = (dir === 'right') ? curX : (curX - tw);
       const flipped = (dir === 'left');
-      positions.push({ tile, x: tileX, y: curY, tw, th, orient, idx: i, flipped });
+      positions.push({ tile, x: tileX, y: tileY, tw, th, orient, idx: i, flipped });
 
-      // Avanza cursor.
       if (dir === 'right') curX += tw + gap;
       else                 curX -= tw + gap;
+      justAfterCorner = false;
     }
-
-    // Determinar alto total para que la mesa se ajuste.
-    let maxBottom = 0;
-    positions.forEach(p => { maxBottom = Math.max(maxBottom, p.y + p.th); });
-    chainEl.style.minHeight = (maxBottom + padding) + 'px';
 
     // Renderizar cada ficha como absolutely-positioned.
     positions.forEach(p => {
@@ -359,6 +367,7 @@
       if (playable) btn.classList.add('playable');
 
       btn.addEventListener('click', () => {
+        btn.blur();  // evitar que iOS Safari deje el botón con estilo "focus" pegado
         if (entry.canPlay.left && entry.canPlay.right) {
           openEndSelector(t);
         } else if (entry.canPlay.left) {
