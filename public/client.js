@@ -201,12 +201,24 @@
     chainEl.innerHTML = '';
     const tpr = computeTilesPerRow();
 
+    // Todas las filas y esquinas comparten el mismo ancho ("track") para que
+    // las puntas de las cornerizadas queden perfectamente alineadas con las
+    // últimas fichas de la fila previa.
+    const w = window.innerWidth;
+    let tileW;
+    if (w <= 380)      tileW = 52;
+    else if (w <= 600) tileW = 60;
+    else               tileW = 80;
+    const gap = 1;
+    const trackWidth = tpr * tileW + (tpr - 1) * gap;
+
     let i = 0;
     let isReverse = false;
     while (i < chain.length) {
       // 1) Fila de fichas horizontales.
       const row = document.createElement('div');
       row.className = 'chain-row' + (isReverse ? ' reverse' : '');
+      row.style.width = trackWidth + 'px';
       let placed = 0;
       while (placed < tpr && i < chain.length) {
         row.appendChild(createTileWrap(chain[i], 'h', i, lastMove));
@@ -215,13 +227,11 @@
       }
       chainEl.appendChild(row);
 
-      // 2) Esquina: ficha vertical alineada al extremo que dobla. Le damos
-      //    a la corner el mismo ancho que la fila previa para que la V quede
-      //    exactamente sobre el borde correspondiente.
+      // 2) Esquina: ficha vertical alineada al extremo que dobla.
       if (i < chain.length) {
         const corner = document.createElement('div');
         corner.className = 'chain-corner ' + (isReverse ? 'left' : 'right');
-        corner.style.width = row.getBoundingClientRect().width + 'px';
+        corner.style.width = trackWidth + 'px';
         corner.appendChild(createTileWrap(chain[i], 'v', i, lastMove));
         chainEl.appendChild(corner);
         i++;

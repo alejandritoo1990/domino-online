@@ -385,10 +385,12 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   width: 80px;
   height: 40px;
 }
+/* La vertical tiene las dimensiones exactas de una horizontal rotada 90°
+   para que las esquinas de la cadena conecten visualmente sin saltos. */
 .domino.v {
   flex-direction: column;
-  width: 50px;
-  height: 100px;
+  width: 40px;
+  height: 80px;
 }
 
 /* Dobles en la cadena: se colocan perpendiculares como en el dominó real */
@@ -631,7 +633,7 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 @media (max-width: 600px) {
   .domino.h { width: 60px; height: 30px; }
   .domino.h.double { width: 30px; height: 60px; }
-  .domino.v { width: 40px; height: 80px; }
+  .domino.v { width: 30px; height: 60px; }
   .dot { width: 5px; height: 5px; }
   .tile-btn { width: 36px; height: 72px; min-height: 72px; }
   .tile-btn .dot { width: 5px; height: 5px; }
@@ -648,7 +650,7 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 @media (max-width: 380px) {
   .domino.h { width: 52px; height: 26px; }
   .domino.h.double { width: 26px; height: 52px; }
+  .domino.v { width: 26px; height: 52px; }
   .tile-btn { width: 32px; height: 64px; min-height: 64px; }
-  .domino.v { width: 36px; height: 72px; }
   .chain { min-height: 220px; }
 }
