@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dominó</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- Vista lobby -->
+  <main id="view-lobby" class="view lobby">
+    <h1>Dominó</h1>
+    <p class="subtitle">Multijugador 4 jugadores</p>
+
+    <section class="card">
+      <label for="name">Tu nombre</label>
+      <input type="text" id="name" maxlength="20" placeholder="Ej: Pedro" autocomplete="off">
+
+      <div class="row">
+        <button id="btn-create">Crear sala</button>
+      </div>
+
+      <hr>
+
+      <label for="code">Código de sala</label>
+      <input type="text" id="code" maxlength="6" placeholder="Ej: ABCDE" autocomplete="off">
+      <div class="row">
+        <button id="btn-join">Unirse a sala</button>
+      </div>
+
+      <p id="error" class="error"></p>
+    </section>
+  </main>
+
+  <!-- Vista sala de espera -->
+  <section id="view-waiting" class="view hidden">
+    <h2>Sala de espera</h2>
+    <p>Comparte este código con tus amigos:</p>
+    <div id="room-code" class="code-display">-----</div>
+    <p>Jugadores conectados:</p>
+    <ul id="waiting-players" class="player-list"></ul>
+    <p class="hint">La partida arranca automáticamente al llegar a 4 jugadores.</p>
+  </section>
+
+  <!-- Vista de juego -->
+  <section id="view-game" class="view hidden">
+    <header class="game-header">
+      <div id="turn-indicator" class="turn">Esperando...</div>
+      <div class="room-info">Sala: <span id="game-code"></span></div>
+    </header>
+
+    <div class="game-main">
+      <div class="left-col">
+        <h3>Jugadores</h3>
+        <ul id="players-list" class="player-list"></ul>
+      </div>
+
+      <div class="center-col">
+        <div class="ends-info">
+          <span>Izq: <strong id="end-left">-</strong></span>
+          <span>Der: <strong id="end-right">-</strong></span>
+        </div>
+        <div id="table-chain" class="chain"></div>
+
+        <div class="hand-section">
+          <h3>Tu mano</h3>
+          <div id="hand" class="hand"></div>
+          <div class="actions">
+            <button id="btn-pass" disabled>Pasar</button>
+          </div>
+          <div id="end-selector" class="end-selector hidden">
+            <p>¿Dónde jugar <span id="end-selector-tile"></span>?</p>
+            <button id="btn-play-left">← Izquierda</button>
+            <button id="btn-play-right">Derecha →</button>
+            <button id="btn-cancel-end">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <h3>Historial</h3>
+        <ol id="log" class="log"></ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- Vista fin -->
+  <section id="view-over" class="view hidden">
+    <h2 id="over-title">Partida terminada</h2>
+    <p id="over-reason"></p>
+    <h3>Puntajes</h3>
+    <ul id="over-scores" class="player-list"></ul>
+    <button id="btn-home">Volver al inicio</button>
+  </section>
+
+  <!-- Banner flotante (errores, avisos) -->
+  <div id="banner" class="banner hidden"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/client.js"></script>
+</body>
+</html>
