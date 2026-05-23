@@ -1,62 +1,48 @@
-/* Estilos mínimos. Monoespaciada para que las fichas se alineen bien. */
+/* ====== Base ====== */
+* { box-sizing: border-box; }
 
-* {
-  box-sizing: border-box;
+html, body {
+  margin: 0;
+  padding: 0;
 }
 
 body {
   font-family: 'Courier New', Consolas, Monaco, monospace;
   background: #1e1e1e;
   color: #e6e6e6;
-  margin: 0;
-  padding: 1rem;
+  padding: 0.75rem;
   min-height: 100vh;
 }
 
-h1, h2, h3 {
-  margin: 0.5rem 0;
-}
+h1, h2, h3 { margin: 0.5rem 0; }
 
-.hidden {
-  display: none !important;
-}
+.hidden { display: none !important; }
 
-/* ===== Lobby ===== */
-.lobby {
-  max-width: 480px;
-  margin: 2rem auto;
+button {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0.6rem 1.1rem;
+  background: #3b7;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 0.2rem;
+  min-height: 44px; /* tap target accesible en móvil */
 }
-
-.subtitle {
-  color: #999;
-  margin-bottom: 1.5rem;
-}
-
-.card {
-  background: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 6px;
-  padding: 1.5rem;
-}
-
-label {
-  display: block;
-  margin-top: 0.75rem;
-  margin-bottom: 0.25rem;
-  font-size: 0.9rem;
-  color: #bbb;
-}
+button:hover:not(:disabled) { background: #2a8; }
+button:disabled { background: #444; color: #888; cursor: not-allowed; }
 
 input[type="text"] {
   width: 100%;
-  padding: 0.6rem;
+  padding: 0.65rem;
   font-family: inherit;
   font-size: 1rem;
   background: #1e1e1e;
   border: 1px solid #555;
   border-radius: 4px;
   color: #e6e6e6;
-  text-transform: none;
+  min-height: 44px;
 }
 
 input#code {
@@ -66,62 +52,49 @@ input#code {
   font-size: 1.2rem;
 }
 
-button {
-  font-family: inherit;
-  font-size: 1rem;
-  padding: 0.6rem 1.2rem;
-  background: #3b7;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin: 0.25rem;
+/* ====== Lobby ====== */
+.lobby {
+  max-width: 480px;
+  margin: 1.5rem auto;
+}
+.subtitle { color: #999; margin-bottom: 1.2rem; }
+
+.card {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 1.2rem;
 }
 
-button:hover:not(:disabled) {
-  background: #2a8;
+label {
+  display: block;
+  margin: 0.7rem 0 0.25rem;
+  font-size: 0.9rem;
+  color: #bbb;
+}
+.row { margin-top: 0.6rem; }
+hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
+.error { color: #f66; min-height: 1.4em; margin-top: 0.6rem; }
+
+/* ====== Waiting ====== */
+#view-waiting {
+  max-width: 600px;
+  margin: 1.5rem auto;
 }
 
-button:disabled {
-  background: #444;
-  color: #888;
-  cursor: not-allowed;
-}
-
-.row {
-  margin-top: 0.75rem;
-}
-
-hr {
-  border: none;
-  border-top: 1px solid #444;
-  margin: 1.5rem 0;
-}
-
-.error {
-  color: #f66;
-  min-height: 1.5em;
-  margin-top: 0.75rem;
-}
-
-/* ===== Sala de espera ===== */
 .code-display {
   font-size: 2.5rem;
   letter-spacing: 0.3em;
   background: #2a2a2a;
   border: 2px dashed #3b7;
-  padding: 1rem;
+  padding: 0.8rem;
   text-align: center;
   margin: 1rem 0;
   border-radius: 6px;
   user-select: all;
 }
 
-.player-list {
-  list-style: none;
-  padding: 0;
-}
-
+.player-list { list-style: none; padding: 0; margin: 0.5rem 0; }
 .player-list li {
   background: #2a2a2a;
   border: 1px solid #444;
@@ -131,175 +104,104 @@ hr {
   display: flex;
   justify-content: space-between;
 }
+.player-list li.current-turn { border-color: #3b7; background: #1e3a2a; }
+.player-list li.disconnected { opacity: 0.5; border-color: #f66; }
+.player-list li.you { font-weight: bold; }
 
-.player-list li.current-turn {
-  border-color: #3b7;
-  background: #1e3a2a;
-}
+.hint { color: #999; font-size: 0.9rem; margin-top: 1.2rem; }
 
-.player-list li.disconnected {
-  opacity: 0.5;
-  border-color: #f66;
-}
-
-.player-list li.you {
-  font-weight: bold;
-}
-
-.hint {
-  color: #999;
-  font-size: 0.9rem;
-  margin-top: 1.5rem;
-}
-
-/* ===== Juego ===== */
-.view {
-  max-width: 1200px;
-  margin: 0 auto;
-}
+/* ====== Game ====== */
+#view-game { max-width: 1200px; margin: 0 auto; }
 
 .game-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 1rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem;
   background: #2a2a2a;
   border-radius: 6px;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .turn {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-weight: bold;
 }
-
 .turn.your-turn {
   color: #3eb;
   animation: pulse 1.5s infinite;
 }
-
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50% { opacity: 0.55; }
 }
 
-.room-info {
-  color: #999;
-}
+.room-info { color: #999; font-size: 0.95rem; }
 
 .game-main {
   display: grid;
   grid-template-columns: 200px 1fr 240px;
-  gap: 1rem;
+  grid-template-areas: "left center right";
+  gap: 0.75rem;
 }
 
-@media (max-width: 900px) {
-  .game-main {
-    grid-template-columns: 1fr;
-  }
-}
+.left-col  { grid-area: left;   }
+.center-col{ grid-area: center; }
+.right-col { grid-area: right;  }
 
 .left-col, .right-col, .center-col {
   background: #2a2a2a;
   border-radius: 6px;
-  padding: 1rem;
+  padding: 0.85rem;
 }
 
 .ends-info {
   display: flex;
   justify-content: space-around;
   background: #1e1e1e;
-  padding: 0.5rem;
+  padding: 0.45rem;
   border-radius: 4px;
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.05rem;
 }
 
 .chain {
   background: #0e2e1e;
   border: 1px solid #2a5a3a;
   border-radius: 6px;
-  padding: 1rem;
-  min-height: 80px;
-  font-size: 1.2rem;
-  word-break: break-all;
+  padding: 0.8rem;
+  min-height: 70px;
   overflow-x: auto;
-  white-space: normal;
-  line-height: 2;
+  white-space: nowrap;
   text-align: center;
+  line-height: 1.2;
 }
+.chain:empty::before { content: '(mesa vacía)'; color: #888; }
 
-.tile {
-  display: inline-block;
-  background: #f5f5dc;
-  color: #111;
-  padding: 0.2rem 0.5rem;
-  margin: 0.15rem;
-  border-radius: 3px;
-  font-weight: bold;
-  font-family: inherit;
-  border: 1px solid #aaa;
-}
-
-.tile-double {
-  background: #ffefa1;
-}
-
-.hand-section {
-  margin-top: 1.5rem;
-}
+.hand-section { margin-top: 1rem; }
+.hand-section h3 { margin-bottom: 0.4rem; }
 
 .hand {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
-  margin-bottom: 0.75rem;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  justify-content: center;
 }
 
-.tile-btn {
-  background: #f5f5dc;
-  color: #111;
-  border: 1px solid #888;
-  padding: 0.5rem 0.7rem;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  margin: 0;
-}
-
-.tile-btn:hover:not(:disabled) {
-  background: #fff;
-  border-color: #3b7;
-}
-
-.tile-btn:disabled {
-  background: #6a6a5a;
-  color: #aaa;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.tile-btn.playable {
-  border: 2px solid #3b7;
-}
-
-.actions {
-  margin-top: 0.5rem;
-}
+.actions { margin-top: 0.3rem; text-align: center; }
 
 .end-selector {
   background: #1e1e1e;
   border: 1px solid #3b7;
-  padding: 0.75rem;
+  padding: 0.7rem;
   border-radius: 4px;
-  margin-top: 0.75rem;
+  margin-top: 0.6rem;
+  text-align: center;
 }
-
-.end-selector p {
-  margin: 0 0 0.5rem;
-}
+.end-selector p { margin: 0 0 0.4rem; }
 
 .log {
   font-size: 0.85rem;
@@ -309,13 +211,102 @@ hr {
   overflow-y: auto;
   margin: 0;
 }
-
 .log li {
   padding: 0.25rem 0;
   border-bottom: 1px solid #333;
   color: #ccc;
 }
 
+/* ====== Fichas de dominó (visuales con dots) ======
+   .domino  = contenedor de la ficha
+   .h       = horizontal (mesa)
+   .v       = vertical   (mano)
+   .domino-half = una de las dos mitades
+   .dot     = punto, posicionado en grid 3x3 dentro de la mitad */
+
+.domino {
+  display: inline-flex;
+  background: #f6f1de;
+  border: 2px solid #3a2d18;
+  border-radius: 5px;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.4);
+  vertical-align: middle;
+  margin: 2px;
+  flex-shrink: 0;
+}
+
+.domino.h {
+  flex-direction: row;
+  width: 80px;
+  height: 40px;
+}
+.domino.v {
+  flex-direction: column;
+  width: 50px;
+  height: 100px;
+}
+
+.domino-half {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 4px;
+  position: relative;
+}
+
+.domino.h .domino-half:first-child {
+  border-right: 1.5px solid #3a2d18;
+}
+.domino.v .domino-half:first-child {
+  border-bottom: 1.5px solid #3a2d18;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  background: #1a1a1a;
+  border-radius: 50%;
+  align-self: center;
+  justify-self: center;
+}
+
+/* Botón de ficha en la mano (es un button con la misma anatomía) */
+.tile-btn {
+  background: #f6f1de;
+  border: 2px solid #3a2d18;
+  border-radius: 5px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.4);
+  width: 56px;
+  height: 110px;
+  min-height: 110px;
+  display: inline-flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: transform 0.08s ease;
+}
+.tile-btn:hover:not(:disabled) { transform: translateY(-3px); }
+.tile-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.tile-btn.playable {
+  border-color: #3b7;
+  box-shadow: 0 0 0 2px rgba(60,200,140,0.4), 0 2px 3px rgba(0,0,0,0.4);
+}
+
+/* Tipo "texto" — solo para el log (compacto) */
+.tile-txt {
+  font-family: inherit;
+  background: #f5f5dc;
+  color: #111;
+  padding: 0 0.3rem;
+  border-radius: 2px;
+  font-weight: bold;
+  font-size: 0.85em;
+}
+
+/* ====== Banner flotante ====== */
 .banner {
   position: fixed;
   bottom: 1rem;
@@ -323,30 +314,63 @@ hr {
   transform: translateX(-50%);
   background: #6a3;
   color: #fff;
-  padding: 0.75rem 1.5rem;
+  padding: 0.7rem 1.3rem;
   border-radius: 4px;
   z-index: 100;
+  max-width: calc(100vw - 2rem);
+  text-align: center;
 }
+.banner.warn { background: #c63; }
+.banner.err  { background: #c33; }
 
-.banner.warn {
-  background: #c63;
-}
-
-.banner.err {
-  background: #c33;
-}
-
-/* ===== Vista fin ===== */
+/* ====== Vista fin ====== */
 #view-over {
   max-width: 600px;
-  margin: 2rem auto;
+  margin: 1.5rem auto;
   background: #2a2a2a;
-  padding: 2rem;
+  padding: 1.5rem;
   border-radius: 6px;
   text-align: center;
 }
+#over-title { font-size: 1.8rem; color: #3eb; }
 
-#over-title {
-  font-size: 2rem;
-  color: #3eb;
+/* ====== Responsive móvil ====== */
+@media (max-width: 900px) {
+  body { padding: 0.5rem; }
+  .game-main {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "center"
+      "left"
+      "right";
+    gap: 0.5rem;
+  }
+  .game-header { padding: 0.5rem; }
+  .turn { font-size: 1.15rem; }
+  .left-col, .right-col, .center-col { padding: 0.6rem; }
+}
+
+@media (max-width: 600px) {
+  /* Fichas un pelín más pequeñas en móvil */
+  .domino.h { width: 68px; height: 34px; }
+  .domino.v { width: 44px; height: 88px; }
+  .dot { width: 6px; height: 6px; }
+  .tile-btn { width: 50px; height: 100px; min-height: 100px; }
+
+  .chain { padding: 0.5rem; min-height: 60px; }
+  .ends-info { font-size: 0.95rem; padding: 0.35rem; }
+
+  /* Log más compacto, lo escondemos detrás de scroll */
+  .log { max-height: 200px; font-size: 0.8rem; }
+
+  .code-display { font-size: 1.8rem; padding: 0.6rem; }
+
+  h2 { font-size: 1.2rem; }
+  h3 { font-size: 1rem; }
+}
+
+@media (max-width: 380px) {
+  .domino.h { width: 60px; height: 30px; }
+  .tile-btn { width: 44px; height: 88px; min-height: 88px; }
+  .domino.v { width: 40px; height: 80px; }
 }

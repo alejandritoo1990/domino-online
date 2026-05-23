@@ -79,6 +79,54 @@
 
   function tileTxt(t) { return `[${t[0]}|${t[1]}]`; }
 
+  // Posiciones de los dots dentro de una mitad (grid 3x3, celdas numeradas 1..9).
+  const DOT_POSITIONS = {
+    0: [],
+    1: [5],
+    2: [1, 9],
+    3: [1, 5, 9],
+    4: [1, 3, 7, 9],
+    5: [1, 3, 5, 7, 9],
+    6: [1, 3, 4, 6, 7, 9],
+  };
+
+  // Crea una mitad de ficha con sus dots.
+  function makeHalf(value) {
+    const half = document.createElement('div');
+    half.className = 'domino-half';
+    for (const pos of DOT_POSITIONS[value] || []) {
+      const row = Math.ceil(pos / 3);
+      const col = ((pos - 1) % 3) + 1;
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      dot.style.gridRow = row;
+      dot.style.gridColumn = col;
+      half.appendChild(dot);
+    }
+    return half;
+  }
+
+  // Crea un elemento de ficha visual (no clickeable). orientation: 'h' | 'v'.
+  function makeTileEl(tile, orientation) {
+    const el = document.createElement('div');
+    el.className = 'domino ' + orientation;
+    el.appendChild(makeHalf(tile[0]));
+    el.appendChild(makeHalf(tile[1]));
+    el.setAttribute('aria-label', tileTxt(tile));
+    return el;
+  }
+
+  // Crea un botón clickeable con la anatomía de una ficha vertical (para la mano).
+  function makeTileButton(tile) {
+    const btn = document.createElement('button');
+    btn.className = 'tile-btn';
+    btn.appendChild(makeHalf(tile[0]));
+    btn.appendChild(makeHalf(tile[1]));
+    btn.setAttribute('aria-label', tileTxt(tile));
+    btn.title = tileTxt(tile);
+    return btn;
+  }
+
   function setUrl(code) {
     const target = code ? `/room/${code}` : '/';
     if (window.location.pathname !== target) {
@@ -89,21 +137,9 @@
   // ===== Renderizado =====
   function renderChain(chain, ends) {
     chainEl.innerHTML = '';
-    if (chain.length === 0) {
-      chainEl.textContent = '(mesa vacía)';
-    } else {
-      chain.forEach((t, i) => {
-        const span = document.createElement('span');
-        span.className = 'tile' + (t[0] === t[1] ? ' tile-double' : '');
-        span.textContent = tileTxt(t);
-        chainEl.appendChild(span);
-        if (i < chain.length - 1) {
-          const sep = document.createElement('span');
-          sep.textContent = '-';
-          chainEl.appendChild(sep);
-        }
-      });
-    }
+    chain.forEach((t) => {
+      chainEl.appendChild(makeTileEl(t, 'h'));
+    });
     endLeftEl.textContent = ends.left === null ? '-' : ends.left;
     endRightEl.textContent = ends.right === null ? '-' : ends.right;
   }
@@ -129,9 +165,7 @@
     }
     lastHand.forEach((entry) => {
       const t = entry.tile;
-      const btn = document.createElement('button');
-      btn.className = 'tile-btn';
-      btn.textContent = tileTxt(t);
+      const btn = makeTileButton(t);
       const playable = yourTurn && (entry.canPlay.left || entry.canPlay.right);
       btn.disabled = !playable;
       if (playable) btn.classList.add('playable');

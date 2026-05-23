@@ -21,7 +21,16 @@ const DISCONNECT_GRACE_MS = 60_000;
 // a '/room/CODE') y reloads, sin dejar salas zombies por mucho tiempo.
 const WAITING_GRACE_MS = 30_000;
 
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// Servimos estáticos sin caché para evitar que el navegador siga sirviendo
+// CSS/JS viejos después de un cambio. Trade-off: cada recarga pide los archivos
+// de nuevo. Para una app de uso casual no impacta y simplifica iteración.
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  etag: false,
+  lastModified: false,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-store');
+  },
+}));
 
 // Una sola página: cliente único maneja todas las vistas. /room/:code
 // permite enlaces compartibles; el cliente lee el código de la URL.
