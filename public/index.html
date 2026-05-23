@@ -47,7 +47,10 @@
   <section id="view-game" class="view hidden">
     <header class="game-header">
       <div id="turn-indicator" class="turn">Esperando...</div>
-      <div class="room-info">Sala: <span id="game-code"></span></div>
+      <div class="header-meta">
+        <span class="round-info">Mano <span id="round-number">1</span> · Meta <span id="target-score">100</span></span>
+        <span class="room-info">Sala: <span id="game-code"></span></span>
+      </div>
     </header>
 
     <div class="game-main">
@@ -85,12 +88,27 @@
     </div>
   </section>
 
-  <!-- Vista fin -->
+  <!-- Vista resumen de mano (entre rondas) -->
+  <section id="view-round-summary" class="view hidden">
+    <h2 id="rs-title">Mano terminada</h2>
+    <p id="rs-reason" class="rs-reason"></p>
+    <p id="rs-points" class="rs-points"></p>
+
+    <h3>Puntaje acumulado</h3>
+    <ul id="rs-scoreboard" class="scoreboard"></ul>
+
+    <div class="rs-controls">
+      <button id="btn-ready">Listo para la siguiente mano</button>
+      <p id="rs-countdown" class="rs-countdown"></p>
+    </div>
+  </section>
+
+  <!-- Vista fin de partida -->
   <section id="view-over" class="view hidden">
     <h2 id="over-title">Partida terminada</h2>
     <p id="over-reason"></p>
-    <h3>Puntajes</h3>
-    <ul id="over-scores" class="player-list"></ul>
+    <h3>Puntaje final</h3>
+    <ul id="over-scores" class="scoreboard"></ul>
     <button id="btn-home">Volver al inicio</button>
   </section>
 

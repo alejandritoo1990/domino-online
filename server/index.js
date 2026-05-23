@@ -20,6 +20,8 @@ const DISCONNECT_GRACE_MS = 60_000;
 // Gracia más corta en sala de espera: cubre redirects (creador navegando de '/'
 // a '/room/CODE') y reloads, sin dejar salas zombies por mucho tiempo.
 const WAITING_GRACE_MS = 30_000;
+// Tras una mano, espera para que todos vean el resumen y le den "Listo".
+const ROUND_SUMMARY_MS = 15_000;
 
 // Servimos estáticos sin caché para evitar que el navegador siga sirviendo
 // CSS/JS viejos después de un cambio. Trade-off: cada recarga pide los archivos
@@ -63,13 +65,17 @@ function publicGameState(room) {
     ends,
     turn: room.turn,
     turnName: room.players[room.turn] ? room.players[room.turn].name : null,
-    players: room.players.map(p => ({
+    players: room.players.map((p, i) => ({
       name: p.name,
       connected: p.connected,
       tilesLeft: p.hand.length,
+      score: room.scoreboard ? room.scoreboard[i] : 0,
     })),
     log: room.log,
     lastMove: room.lastMove || null,
+    scoreboard: room.scoreboard || [0, 0, 0, 0],
+    targetScore: room.targetScore || 100,
+    roundNumber: room.roundNumber || 1,
   };
 }
 
@@ -95,16 +101,75 @@ function emitGameState(room) {
   }
 }
 
-// Arranca la partida cuando hay 4 jugadores.
+// Arranca la partida cuando hay 4 jugadores (primera mano).
 function beginGame(room) {
-  roomsMod.startGame(room);
-  const starterName = room.players[room.turn].name;
-  room.log.push(`Empieza ${starterName} (tiene el ${room.starterTile[0]}|${room.starterTile[1]})`);
-
-  // Estado inicial público.
+  roomsMod.initGame(room);
   io.to(room.code).emit('game_started', publicGameState(room));
-  // Mandamos manos privadas.
   emitGameState(room);
+}
+
+// Arranca una nueva mano dentro de la misma partida.
+function beginNextRound(room, starterPlayer) {
+  roomsMod.startRound(room, starterPlayer);
+  io.to(room.code).emit('round_started', publicGameState(room));
+  emitGameState(room);
+}
+
+// Resuelve el fin de una mano: calcula puntos, los suma al scoreboard, y
+// decide si la partida sigue o terminó.
+function finishRound(room, winnerIdx, reason) {
+  // Puntos: suma de pips de las 3 manos perdedoras (la del ganador no cuenta).
+  let pointsAwarded = 0;
+  const perPlayer = room.players.map((p, i) => ({
+    player: i,
+    name: p.name,
+    points: game.handPoints(p.hand),
+    tilesLeft: p.hand.length,
+  }));
+  for (let i = 0; i < 4; i++) {
+    if (i !== winnerIdx) pointsAwarded += perPlayer[i].points;
+  }
+  room.scoreboard[winnerIdx] += pointsAwarded;
+
+  const winnerName = room.players[winnerIdx].name;
+  const reasonTxt = reason === 'domino'
+    ? `${winnerName} se quedó sin fichas (¡dominó!)`
+    : `Trancado — ${winnerName} tenía menos puntos en mano`;
+  room.log.push(`${reasonTxt}. +${pointsAwarded} pts. Total: ${room.scoreboard[winnerIdx]}`);
+
+  const matchOver = room.scoreboard[winnerIdx] >= room.targetScore;
+  room.status = matchOver ? 'finished' : 'round_summary';
+  room.lastRoundWinner = winnerIdx;
+
+  const summary = {
+    winner: winnerIdx,
+    winnerName,
+    reason,
+    pointsAwarded,
+    perPlayer,
+    scoreboard: room.scoreboard.slice(),
+    targetScore: room.targetScore,
+    roundNumber: room.roundNumber,
+    matchOver,
+    players: room.players.map(p => p.name),
+  };
+
+  if (matchOver) {
+    // Fin de la partida real.
+    io.to(room.code).emit('match_over', summary);
+    // Limpiamos la sala tras un rato.
+    setTimeout(() => roomsMod.deleteRoom(room.code), 60_000);
+    return;
+  }
+
+  // Mostrar resumen y esperar a que todos digan "Listo" o expire el timer.
+  io.to(room.code).emit('round_summary', summary);
+  if (room.roundEndTimer) clearTimeout(room.roundEndTimer);
+  room.roundEndTimer = setTimeout(() => {
+    if (room.status === 'round_summary') {
+      beginNextRound(room, winnerIdx);
+    }
+  }, ROUND_SUMMARY_MS);
 }
 
 // ---- manejo de eventos ----
@@ -228,20 +293,10 @@ io.on('connection', (socket) => {
       (chosenEnd === 'left' ? 'a la izquierda' : 'a la derecha');
     room.log.push(`${player.name} jugó [${placed[0]}|${placed[1]}] ${sideTxt}`);
 
-    // ¿Terminó la partida?
+    // ¿Terminó la mano por dominó?
     if (player.hand.length === 0) {
-      const result = game.resolveEnd(
-        room.players.map(p => p.hand),
-        room.players.map(p => p.name)
-      );
-      room.status = 'finished';
       emitGameState(room);
-      io.to(room.code).emit('game_over', {
-        winner: result.winner,
-        winnerName: room.players[result.winner].name,
-        reason: result.reason,
-        scores: result.scores,
-      });
+      finishRound(room, playerIdx, 'domino');
       return;
     }
 
@@ -273,6 +328,34 @@ io.on('connection', (socket) => {
     advanceTurn(room);
     emitGameState(room);
     checkBlocked(room);
+  });
+
+  socket.on('ready_for_next_round', () => {
+    const room = roomsMod.getRoomBySocket(socket.id);
+    if (!room || room.status !== 'round_summary') return;
+    const playerIdx = roomsMod.getPlayerIndex(room, socket.id);
+    if (playerIdx === -1) return;
+    room.readyPlayers.add(playerIdx);
+
+    // Notificamos a todos quiénes están listos.
+    io.to(room.code).emit('ready_update', {
+      ready: Array.from(room.readyPlayers),
+    });
+
+    // Si los 4 (o los conectados) están listos, arrancamos ya.
+    const connectedIdx = room.players
+      .map((p, i) => p.connected ? i : -1)
+      .filter(i => i !== -1);
+    const allReady = connectedIdx.every(i => room.readyPlayers.has(i));
+    if (allReady && connectedIdx.length >= 2) {
+      // El ganador de la mano anterior arranca la siguiente.
+      // Lo recuperamos del scoreboard: quien gana la mano es quien sumó puntos
+      // por última vez. Más simple: lo guardamos al hacer finishRound.
+      const starter = room.lastRoundWinner !== undefined
+        ? room.lastRoundWinner
+        : room.turn;
+      beginNextRound(room, starter);
+    }
   });
 
   socket.on('disconnect', () => {
@@ -338,17 +421,17 @@ function checkBlocked(room) {
   if (room.status !== 'playing') return;
   const ends = game.getEnds(room.chain);
   if (game.isBlocked(room.players.map(p => p.hand), ends)) {
-    const result = game.resolveEnd(
-      room.players.map(p => p.hand),
-      room.players.map(p => p.name)
-    );
-    room.status = 'finished';
-    io.to(room.code).emit('game_over', {
-      winner: result.winner,
-      winnerName: room.players[result.winner].name,
-      reason: 'trancado',
-      scores: result.scores,
-    });
+    // En trancado gana quien tiene menos puntos en mano.
+    let minPts = Infinity;
+    let winnerIdx = 0;
+    for (let i = 0; i < 4; i++) {
+      const pts = game.handPoints(room.players[i].hand);
+      if (pts < minPts) {
+        minPts = pts;
+        winnerIdx = i;
+      }
+    }
+    finishRound(room, winnerIdx, 'trancado');
   }
 }
 

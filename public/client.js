@@ -8,10 +8,11 @@
 
   // ===== Referencias a elementos =====
   const views = {
-    lobby:   document.getElementById('view-lobby'),
-    waiting: document.getElementById('view-waiting'),
-    game:    document.getElementById('view-game'),
-    over:    document.getElementById('view-over'),
+    lobby:           document.getElementById('view-lobby'),
+    waiting:         document.getElementById('view-waiting'),
+    game:            document.getElementById('view-game'),
+    'round-summary': document.getElementById('view-round-summary'),
+    over:            document.getElementById('view-over'),
   };
 
   // Lobby
@@ -26,6 +27,8 @@
   const waitingPlayersEl = document.getElementById('waiting-players');
 
   // Game
+  const roundNumberEl = document.getElementById('round-number');
+  const targetScoreEl = document.getElementById('target-score');
   const gameCodeEl = document.getElementById('game-code');
   const turnIndicator = document.getElementById('turn-indicator');
   const playersListEl = document.getElementById('players-list');
@@ -40,6 +43,14 @@
   const btnPlayRight = document.getElementById('btn-play-right');
   const btnCancelEnd = document.getElementById('btn-cancel-end');
   const logEl = document.getElementById('log');
+
+  // Round summary
+  const rsTitle = document.getElementById('rs-title');
+  const rsReason = document.getElementById('rs-reason');
+  const rsPoints = document.getElementById('rs-points');
+  const rsScoreboard = document.getElementById('rs-scoreboard');
+  const btnReady = document.getElementById('btn-ready');
+  const rsCountdown = document.getElementById('rs-countdown');
 
   // Over
   const overTitle = document.getElementById('over-title');
@@ -58,6 +69,9 @@
   let pendingTile = null;
   let bannerTimer = null;
   let hasJoined = false;       // ¿ya entramos a una sala en este socket?
+  let countdownTimer = null;
+  let countdownDeadline = 0;
+  let targetScore = 100;
 
   // ===== Utilidades =====
   function showView(name) {
@@ -157,11 +171,43 @@
     players.forEach((p, i) => {
       const li = document.createElement('li');
       const youMark = p.name === myName ? ' (tú)' : '';
-      li.textContent = `${p.name}${youMark} — ${p.tilesLeft} fichas`;
+      const scoreTxt = (p.score !== undefined) ? ` · ${p.score} pts` : '';
+      li.textContent = `${p.name}${youMark} — ${p.tilesLeft} fichas${scoreTxt}`;
       if (i === turnIdx) li.classList.add('current-turn');
       if (!p.connected) li.classList.add('disconnected');
       if (p.name === myName) li.classList.add('you');
       playersListEl.appendChild(li);
+    });
+  }
+
+  // Renderiza un scoreboard (lista de jugadores con barra de progreso a la meta).
+  // mark: índice del ganador a destacar, o -1.
+  function renderScoreboard(container, players, scoreboard, mark, target) {
+    container.innerHTML = '';
+    scoreboard.forEach((score, i) => {
+      const li = document.createElement('li');
+      const name = players[i] || `Jugador ${i + 1}`;
+      const youMark = name === myName ? ' (tú)' : '';
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'sb-name';
+      nameSpan.textContent = name + youMark;
+      const scoreSpan = document.createElement('span');
+      scoreSpan.className = 'sb-score';
+      scoreSpan.textContent = score + ' / ' + target;
+      li.appendChild(nameSpan);
+      li.appendChild(scoreSpan);
+
+      const bar = document.createElement('div');
+      bar.className = 'sb-bar';
+      const fill = document.createElement('div');
+      fill.className = 'sb-bar-fill';
+      fill.style.width = Math.min(100, (score / target) * 100) + '%';
+      bar.appendChild(fill);
+      li.appendChild(bar);
+
+      if (i === mark) li.classList.add('winner-mark');
+      if (name === myName) li.classList.add('you');
+      container.appendChild(li);
     });
   }
 
@@ -276,6 +322,33 @@
     window.location.href = '/';
   });
 
+  btnReady.addEventListener('click', () => {
+    socket.emit('ready_for_next_round');
+    btnReady.disabled = true;
+    btnReady.textContent = 'Esperando...';
+  });
+
+  function startCountdown(seconds) {
+    stopCountdown();
+    countdownDeadline = Date.now() + seconds * 1000;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((countdownDeadline - Date.now()) / 1000));
+      rsCountdown.textContent = remaining > 0
+        ? `Próxima mano en ${remaining}s...`
+        : 'Empezando...';
+      if (remaining <= 0) stopCountdown();
+    };
+    tick();
+    countdownTimer = setInterval(tick, 500);
+  }
+  function stopCountdown() {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    rsCountdown.textContent = '';
+  }
+
   // ===== Eventos socket =====
   socket.on('room_joined', ({ code, yourName }) => {
     myCode = code;
@@ -307,32 +380,47 @@
         li.style.opacity = '0.5';
         waitingPlayersEl.appendChild(li);
       }
-      // No forzamos showView('waiting') aquí si ya estamos en game.
+      // No forzamos showView('waiting') si ya estamos en game/round-summary/over.
       if (views.over.classList.contains('hidden') &&
-          views.game.classList.contains('hidden')) {
+          views.game.classList.contains('hidden') &&
+          views['round-summary'].classList.contains('hidden')) {
         showView('waiting');
       }
     }
   });
 
-  socket.on('game_started', (state) => {
-    showView('game');
+  function applyGameState(state) {
     renderChain(state.chain, state.ends, state.lastMove);
     renderPlayers(state.players, state.turn);
     renderLog(state.log);
     updateTurnIndicator(state.turn, state.players);
+    if (state.roundNumber) roundNumberEl.textContent = state.roundNumber;
+    if (state.targetScore) {
+      targetScoreEl.textContent = state.targetScore;
+      targetScore = state.targetScore;
+    }
+  }
+
+  socket.on('game_started', (state) => {
+    showView('game');
+    applyGameState(state);
     showBanner('¡Empieza la partida!');
+  });
+
+  socket.on('round_started', (state) => {
+    stopCountdown();
+    showView('game');
+    applyGameState(state);
+    showBanner(`Mano ${state.roundNumber} — ¡a jugar!`);
   });
 
   socket.on('game_state', (state) => {
     if (views.game.classList.contains('hidden') &&
-        views.over.classList.contains('hidden')) {
+        views.over.classList.contains('hidden') &&
+        views['round-summary'].classList.contains('hidden')) {
       showView('game');
     }
-    renderChain(state.chain, state.ends, state.lastMove);
-    renderPlayers(state.players, state.turn);
-    renderLog(state.log);
-    updateTurnIndicator(state.turn, state.players);
+    applyGameState(state);
   });
 
   socket.on('hand_update', ({ hand, yourTurn: yt, canPass }) => {
@@ -362,29 +450,48 @@
     }
   });
 
+  // Resumen de una mano (no es fin de partida).
+  socket.on('round_summary', (data) => {
+    closeEndSelector();
+    yourTurn = false;
+    showView('round-summary');
+    rsTitle.textContent = data.winnerName === myName
+      ? `¡Ganaste la mano ${data.roundNumber}!`
+      : `Mano ${data.roundNumber}: ganó ${data.winnerName}`;
+    rsReason.textContent = data.reason === 'domino'
+      ? 'Se quedó sin fichas (dominó)'
+      : 'Trancado — menor cantidad de puntos en mano';
+    rsPoints.textContent = `+${data.pointsAwarded} puntos a ${data.winnerName}`;
+    renderScoreboard(rsScoreboard, data.players, data.scoreboard, data.winner, data.targetScore);
+    btnReady.disabled = false;
+    btnReady.textContent = 'Listo para la siguiente mano';
+    startCountdown(15);
+  });
+
+  socket.on('ready_update', ({ ready }) => {
+    btnReady.textContent = `Listo (${ready.length}/4)`;
+  });
+
+  // Fin de partida real: alguien alcanzó la meta.
+  socket.on('match_over', (data) => {
+    stopCountdown();
+    showView('over');
+    overTitle.textContent = data.winnerName === myName
+      ? '¡Ganaste la partida!'
+      : `Ganó la partida: ${data.winnerName}`;
+    overReason.textContent = `${data.winnerName} alcanzó ${data.scoreboard[data.winner]} puntos en ${data.roundNumber} manos`;
+    renderScoreboard(overScores, data.players, data.scoreboard, data.winner, data.targetScore);
+  });
+
+  // game_over solo llega ahora cuando la partida se cancela (desconexión).
   socket.on('game_over', (data) => {
+    stopCountdown();
     showView('over');
     if (data.reason === 'cancelled') {
       overTitle.textContent = 'Partida cancelada';
       overReason.textContent = data.message || 'Un jugador no volvió a tiempo.';
       overScores.innerHTML = '';
-      return;
     }
-    overTitle.textContent = data.winnerName === myName
-      ? '¡Ganaste!'
-      : `Ganó ${data.winnerName}`;
-    overReason.textContent = data.reason === 'domino'
-      ? 'Se quedó sin fichas (¡dominó!)'
-      : 'Trancado — menor cantidad de puntos en mano';
-    overScores.innerHTML = '';
-    const sorted = [...data.scores].sort((a, b) => a.points - b.points);
-    sorted.forEach((s) => {
-      const li = document.createElement('li');
-      const youMark = s.name === myName ? ' (tú)' : '';
-      const winMark = s.player === data.winner ? '  (ganador)' : '';
-      li.textContent = `${s.name}${youMark} — ${s.points} pts (${s.tilesLeft} fichas)${winMark}`;
-      overScores.appendChild(li);
-    });
   });
 
   socket.on('error_msg', ({ message }) => {

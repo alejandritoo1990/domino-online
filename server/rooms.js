@@ -105,20 +105,56 @@ function deleteRoom(code) {
   rooms.delete(code);
 }
 
-// Inicializa la partida: reparte fichas y decide quién empieza.
-function startGame(room) {
+// Inicializa la partida (primera mano). Setea scoreboard, meta y arranca ronda 1
+// usando el doble 6 (o doble más alto disponible) para decidir quién empieza.
+function initGame(room) {
+  room.scoreboard = [0, 0, 0, 0];
+  room.targetScore = 100;
+  room.roundNumber = 0;
+  room.log = [];
+  room.readyPlayers = new Set();
+  startRound(room, null);
+}
+
+// Arranca una mano. Si starterPlayer es null, usa doble 6 (primera mano);
+// si no, ese jugador empieza con la ficha que quiera (ganador de mano previa).
+function startRound(room, starterPlayer) {
   const hands = game.deal();
   for (let i = 0; i < 4; i++) {
     room.players[i].hand = hands[i];
   }
-  const starter = game.findStarter(hands);
+
+  let turn, starterTile;
+  if (starterPlayer === null) {
+    const s = game.findStarter(hands);
+    turn = s.player;
+    starterTile = s.tile;
+  } else {
+    turn = starterPlayer;
+    starterTile = null;
+  }
+
   room.status = 'playing';
   room.chain = [];
-  room.turn = starter.player;
-  room.log = [];
+  room.turn = turn;
   room.consecutivePasses = 0;
-  room.starterTile = starter.tile;
+  room.starterTile = starterTile;
   room.lastMove = null;
+  room.roundNumber += 1;
+  room.readyPlayers = new Set();
+  if (room.roundEndTimer) {
+    clearTimeout(room.roundEndTimer);
+    room.roundEndTimer = null;
+  }
+
+  room.log.push(`— Mano ${room.roundNumber} —`);
+  if (starterTile) {
+    room.log.push(
+      `Empieza ${room.players[turn].name} (tiene el ${starterTile[0]}|${starterTile[1]})`
+    );
+  } else {
+    room.log.push(`Empieza ${room.players[turn].name} (ganó la mano anterior)`);
+  }
 }
 
 module.exports = {
@@ -130,5 +166,6 @@ module.exports = {
   getPlayerIndex,
   handleDisconnect,
   deleteRoom,
-  startGame,
+  initGame,
+  startRound,
 };
