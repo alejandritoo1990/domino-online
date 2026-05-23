@@ -183,27 +183,51 @@
     }, 150);
   });
 
+  // Crea un wrapper con la ficha dentro, listo para colgar del DOM.
+  function createTileWrap(tile, orientation, idx, lastMove) {
+    const tileEl = makeTileEl(tile, orientation);
+    if (lastMove && lastMove.index === idx) tileEl.classList.add('last-played');
+    const wrap = document.createElement('div');
+    wrap.className = 'tile-wrap';
+    wrap.appendChild(tileEl);
+    return wrap;
+  }
+
+  // Renderiza la cadena en filas que forman una "L" entre cada par de filas:
+  //   fila horizontal → 1 ficha vertical en la esquina → fila horizontal en
+  //   dirección inversa (rotada 180° para que los pips conecten).
   function renderChain(chain, ends, lastMove) {
     lastChainData = { chain, ends, lastMove };
     chainEl.innerHTML = '';
-    const tilesPerRow = computeTilesPerRow();
-    let currentRow = null;
-    chain.forEach((t, i) => {
-      if (i % tilesPerRow === 0) {
-        currentRow = document.createElement('div');
-        const rowIdx = Math.floor(i / tilesPerRow);
-        currentRow.className = 'chain-row' + (rowIdx % 2 === 1 ? ' reverse' : '');
-        chainEl.appendChild(currentRow);
+    const tpr = computeTilesPerRow();
+
+    let i = 0;
+    let isReverse = false;
+    while (i < chain.length) {
+      // 1) Fila de fichas horizontales.
+      const row = document.createElement('div');
+      row.className = 'chain-row' + (isReverse ? ' reverse' : '');
+      let placed = 0;
+      while (placed < tpr && i < chain.length) {
+        row.appendChild(createTileWrap(chain[i], 'h', i, lastMove));
+        i++;
+        placed++;
       }
-      const tileEl = makeTileEl(t, 'h');
-      if (lastMove && lastMove.index === i) {
-        tileEl.classList.add('last-played');
+      chainEl.appendChild(row);
+
+      // 2) Esquina: ficha vertical alineada al extremo que dobla. Le damos
+      //    a la corner el mismo ancho que la fila previa para que la V quede
+      //    exactamente sobre el borde correspondiente.
+      if (i < chain.length) {
+        const corner = document.createElement('div');
+        corner.className = 'chain-corner ' + (isReverse ? 'left' : 'right');
+        corner.style.width = row.getBoundingClientRect().width + 'px';
+        corner.appendChild(createTileWrap(chain[i], 'v', i, lastMove));
+        chainEl.appendChild(corner);
+        i++;
       }
-      const wrap = document.createElement('div');
-      wrap.className = 'tile-wrap';
-      wrap.appendChild(tileEl);
-      currentRow.appendChild(wrap);
-    });
+      isReverse = !isReverse;
+    }
     endLeftEl.textContent = ends.left === null ? '-' : ends.left;
     endRightEl.textContent = ends.right === null ? '-' : ends.right;
   }

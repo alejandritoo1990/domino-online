@@ -279,23 +279,33 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 0;
 }
 
-/* Cada fila de la cadena va flex row. Las filas impares se invierten y las
-   fichas se rotan 180° para que las conexiones cuadren visualmente (efecto
-   serpentina / zigzag tipo S). */
+/* Cada fila va horizontal de fichas. La fila siguiente queda en dirección
+   inversa, conectada por UNA ficha vertical (esquina) que dobla la cadena
+   en "L" entre filas. */
 .chain-row {
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
   gap: 1px;
+  justify-content: flex-start;
 }
 .chain-row.reverse {
   flex-direction: row-reverse;
+  justify-content: flex-start;  /* "start" en row-reverse = lado derecho */
 }
-/* Wrapper que aplica la rotación de la ficha en fila inversa. Lo hacemos en
-   wrapper (no en .domino) para no chocar con la animación last-played. */
+.chain-corner {
+  display: flex;
+  line-height: 0;
+  margin: -2px 0;  /* pega visualmente la esquina con las filas adyacentes */
+}
+.chain-corner.right { justify-content: flex-end; }
+.chain-corner.left  { justify-content: flex-start; }
+
+/* Wrapper que aplica la rotación de la ficha en fila inversa. La rotación
+   solo se aplica DENTRO de una fila inversa (no en las esquinas verticales). */
 .tile-wrap {
   display: inline-flex;
   line-height: 0;
