@@ -261,13 +261,14 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 #btn-draw:hover:not(:disabled) { background: #d8b768; }
 
 .chain {
+  position: relative;
   background:
     radial-gradient(circle at 30% 20%, rgba(255,255,255,0.04), transparent 60%),
     radial-gradient(circle at 70% 80%, rgba(0,0,0,0.18), transparent 60%),
     linear-gradient(135deg, #14533a, #0c3724);
   border: 1px solid #2a5a3a;
   border-radius: 10px;
-  padding: 1.2rem 1rem;
+  padding: 0;            /* el padding está dentro del cálculo de posiciones */
   min-height: 320px;
   max-width: 100%;
   line-height: 0;
@@ -275,42 +276,17 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   box-shadow:
     inset 0 4px 12px rgba(0,0,0,0.5),
     inset 0 -2px 6px rgba(0,0,0,0.3);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
 }
 
-/* Cada fila va horizontal de fichas. La fila siguiente queda en dirección
-   inversa, conectada por UNA ficha vertical (esquina) que dobla la cadena
-   en "L" entre filas. */
-.chain-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 1px;
-  justify-content: flex-start;
-}
-.chain-row.reverse {
-  flex-direction: row-reverse;
-  justify-content: flex-start;  /* "start" en row-reverse = lado derecho */
-}
-.chain-corner {
-  display: flex;
-  line-height: 0;
-  margin: -2px 0;  /* pega visualmente la esquina con las filas adyacentes */
-}
-.chain-corner.right { justify-content: flex-end; }
-.chain-corner.left  { justify-content: flex-start; }
-
-/* Wrapper que aplica la rotación de la ficha en fila inversa. La rotación
-   solo se aplica DENTRO de una fila inversa (no en las esquinas verticales). */
-.tile-wrap {
-  display: inline-flex;
+/* Cada ficha se posiciona absolutamente dentro de la mesa. Las fichas en
+   "tramos" que van de derecha a izquierda se rotan 180° para que sus pips
+   conecten correctamente con la corner V y entre sí. */
+.tile-abs {
+  position: absolute;
+  display: block;
   line-height: 0;
 }
-.chain-row.reverse .tile-wrap {
+.tile-abs.flipped {
   transform: rotate(180deg);
 }
 .chain:empty::before {

@@ -158,19 +158,13 @@
   }
 
   // ===== Renderizado =====
-  // Calcula cuántas fichas horizontales caben por fila según el ancho actual
-  // de la mesa. Los dobles ocupan menos (perpendiculares), pero usamos el
-  // ancho de una ficha normal como referencia conservadora.
-  function computeTilesPerRow() {
-    const containerW = chainEl.clientWidth || 600;
+  // Devuelve las dimensiones de fichas según viewport actual.
+  // VW/VH = HW/HH rotadas 90° para que las cornerizadas conecten exactas.
+  function getTileDims() {
     const w = window.innerWidth;
-    let tileW;
-    if (w <= 380)      tileW = 52;
-    else if (w <= 600) tileW = 60;
-    else               tileW = 80;
-    const gap = 1;
-    const paddingX = 32;
-    return Math.max(2, Math.floor((containerW - paddingX) / (tileW + gap)));
+    if (w <= 380) return { HW: 52, HH: 26, VW: 26, VH: 52, gap: 1 };
+    if (w <= 600) return { HW: 60, HH: 30, VW: 30, VH: 60, gap: 1 };
+    return                 { HW: 80, HH: 40, VW: 40, VH: 80, gap: 1 };
   }
 
   let lastChainData = null;
@@ -193,51 +187,98 @@
     return wrap;
   }
 
-  // Renderiza la cadena en filas que forman una "L" entre cada par de filas:
-  //   fila horizontal → 1 ficha vertical en la esquina → fila horizontal en
-  //   dirección inversa (rotada 180° para que los pips conecten).
+  // Renderiza la cadena con posicionamiento absoluto y cálculo pixel a pixel.
+  // Cada ficha se ubica precisamente al lado de la anterior, las cornerizadas
+  // se anclan al extremo real de la última ficha (no a un trackWidth genérico),
+  // los dobles se pegan correctamente en las esquinas. Las filas que van en
+  // dirección inversa tienen sus fichas rotadas 180° para que los pips conecten.
   function renderChain(chain, ends, lastMove) {
     lastChainData = { chain, ends, lastMove };
     chainEl.innerHTML = '';
-    const tpr = computeTilesPerRow();
 
-    // Todas las filas y esquinas comparten el mismo ancho ("track") para que
-    // las puntas de las cornerizadas queden perfectamente alineadas con las
-    // últimas fichas de la fila previa.
-    const w = window.innerWidth;
-    let tileW;
-    if (w <= 380)      tileW = 52;
-    else if (w <= 600) tileW = 60;
-    else               tileW = 80;
-    const gap = 1;
-    const trackWidth = tpr * tileW + (tpr - 1) * gap;
+    const { HW, HH, VW, VH, gap } = getTileDims();
+    const padding = 14;
+    const chainW = chainEl.clientWidth || 800;
+    const maxX = chainW - padding;
+    const minX = padding;
 
-    let i = 0;
-    let isReverse = false;
-    while (i < chain.length) {
-      // 1) Fila de fichas horizontales.
-      const row = document.createElement('div');
-      row.className = 'chain-row' + (isReverse ? ' reverse' : '');
-      row.style.width = trackWidth + 'px';
-      let placed = 0;
-      while (placed < tpr && i < chain.length) {
-        row.appendChild(createTileWrap(chain[i], 'h', i, lastMove));
-        i++;
-        placed++;
+    // Calcular posiciones de cada ficha.
+    const positions = [];
+    let curX = padding;   // 'right' → borde izquierdo del próximo; 'left' → borde derecho
+    let curY = padding;
+    let dir = 'right';
+
+    for (let i = 0; i < chain.length; i++) {
+      const tile = chain[i];
+      const isDouble = tile[0] === tile[1];
+
+      // Tamaño según orientación deseada en la dirección horizontal actual.
+      // Dobles van perpendiculares a la cadena (verticales mini).
+      let tw, th, orient;
+      if (isDouble) {
+        tw = VW; th = VH; orient = 'h-double';
+      } else {
+        tw = HW; th = HH; orient = 'h';
       }
-      chainEl.appendChild(row);
 
-      // 2) Esquina: ficha vertical alineada al extremo que dobla.
-      if (i < chain.length) {
-        const corner = document.createElement('div');
-        corner.className = 'chain-corner ' + (isReverse ? 'left' : 'right');
-        corner.style.width = trackWidth + 'px';
-        corner.appendChild(createTileWrap(chain[i], 'v', i, lastMove));
-        chainEl.appendChild(corner);
-        i++;
+      // ¿Esta ficha provocaría overflow → debe convertirse en corner V?
+      let overflow = false;
+      if (dir === 'right' && curX + tw > maxX) overflow = true;
+      if (dir === 'left'  && curX - tw < minX) overflow = true;
+
+      if (overflow) {
+        // Esta ficha pasa a ser la esquina vertical (entre la fila previa y la
+        // siguiente). Tamaño V y se pega al extremo de la última ficha colocada.
+        tw = VW; th = VH; orient = 'v';
+        const lastP = positions[positions.length - 1];
+        let vx, vy;
+        if (dir === 'right') {
+          vx = lastP.x + lastP.tw - VW;  // borde derecho de V = borde derecho de lastP
+        } else {
+          vx = lastP.x;                  // borde izquierdo de V = borde izquierdo de lastP
+        }
+        vy = lastP.y + lastP.th;          // V justo debajo de lastP
+        positions.push({ tile, x: vx, y: vy, tw, th, orient, idx: i, flipped: false });
+
+        // Configurar cursor para la siguiente fila (dirección opuesta).
+        const newDir = (dir === 'right') ? 'left' : 'right';
+        curY = vy + VH;
+        if (newDir === 'right') curX = vx;        // próximo borde izquierdo
+        else                    curX = vx + VW;   // próximo borde derecho (anchor)
+        dir = newDir;
+        continue;
       }
-      isReverse = !isReverse;
+
+      // Coloca la ficha en cursor. Las fichas en dirección 'left' se rotan
+      // 180° para que sus pips conecten visualmente con la corner V y entre sí.
+      const tileX = (dir === 'right') ? curX : (curX - tw);
+      const flipped = (dir === 'left');
+      positions.push({ tile, x: tileX, y: curY, tw, th, orient, idx: i, flipped });
+
+      // Avanza cursor.
+      if (dir === 'right') curX += tw + gap;
+      else                 curX -= tw + gap;
     }
+
+    // Determinar alto total para que la mesa se ajuste.
+    let maxBottom = 0;
+    positions.forEach(p => { maxBottom = Math.max(maxBottom, p.y + p.th); });
+    chainEl.style.minHeight = (maxBottom + padding) + 'px';
+
+    // Renderizar cada ficha como absolutely-positioned.
+    positions.forEach(p => {
+      const wrap = document.createElement('div');
+      wrap.className = 'tile-abs' + (p.flipped ? ' flipped' : '');
+      wrap.style.left = p.x + 'px';
+      wrap.style.top  = p.y + 'px';
+
+      const orientForMake = (p.orient === 'v') ? 'v' : 'h';
+      const tileEl = makeTileEl(p.tile, orientForMake);
+      if (lastMove && lastMove.index === p.idx) tileEl.classList.add('last-played');
+      wrap.appendChild(tileEl);
+      chainEl.appendChild(wrap);
+    });
+
     endLeftEl.textContent = ends.left === null ? '-' : ends.left;
     endRightEl.textContent = ends.right === null ? '-' : ends.right;
   }
