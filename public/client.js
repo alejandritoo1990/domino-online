@@ -158,14 +158,51 @@
   }
 
   // ===== Renderizado =====
+  // Calcula cuántas fichas horizontales caben por fila según el ancho actual
+  // de la mesa. Los dobles ocupan menos (perpendiculares), pero usamos el
+  // ancho de una ficha normal como referencia conservadora.
+  function computeTilesPerRow() {
+    const containerW = chainEl.clientWidth || 600;
+    const w = window.innerWidth;
+    let tileW;
+    if (w <= 380)      tileW = 52;
+    else if (w <= 600) tileW = 60;
+    else               tileW = 80;
+    const gap = 1;
+    const paddingX = 32;
+    return Math.max(2, Math.floor((containerW - paddingX) / (tileW + gap)));
+  }
+
+  let lastChainData = null;
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (!lastChainData) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      renderChain(lastChainData.chain, lastChainData.ends, lastChainData.lastMove);
+    }, 150);
+  });
+
   function renderChain(chain, ends, lastMove) {
+    lastChainData = { chain, ends, lastMove };
     chainEl.innerHTML = '';
+    const tilesPerRow = computeTilesPerRow();
+    let currentRow = null;
     chain.forEach((t, i) => {
-      const el = makeTileEl(t, 'h');
-      if (lastMove && lastMove.index === i) {
-        el.classList.add('last-played');
+      if (i % tilesPerRow === 0) {
+        currentRow = document.createElement('div');
+        const rowIdx = Math.floor(i / tilesPerRow);
+        currentRow.className = 'chain-row' + (rowIdx % 2 === 1 ? ' reverse' : '');
+        chainEl.appendChild(currentRow);
       }
-      chainEl.appendChild(el);
+      const tileEl = makeTileEl(t, 'h');
+      if (lastMove && lastMove.index === i) {
+        tileEl.classList.add('last-played');
+      }
+      const wrap = document.createElement('div');
+      wrap.className = 'tile-wrap';
+      wrap.appendChild(tileEl);
+      currentRow.appendChild(wrap);
     });
     endLeftEl.textContent = ends.left === null ? '-' : ends.left;
     endRightEl.textContent = ends.right === null ? '-' : ends.right;

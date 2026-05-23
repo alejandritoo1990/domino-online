@@ -270,18 +270,38 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   padding: 1.2rem 1rem;
   min-height: 320px;
   max-width: 100%;
-  text-align: center;
   line-height: 0;
   overflow: auto;
   box-shadow:
     inset 0 4px 12px rgba(0,0,0,0.5),
     inset 0 -2px 6px rgba(0,0,0,0.3);
   display: flex;
-  flex-wrap: wrap;
-  align-content: center;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
+  justify-content: center;
+  gap: 2px;
+}
+
+/* Cada fila de la cadena va flex row. Las filas impares se invierten y las
+   fichas se rotan 180° para que las conexiones cuadren visualmente (efecto
+   serpentina / zigzag tipo S). */
+.chain-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 1px;
+}
+.chain-row.reverse {
+  flex-direction: row-reverse;
+}
+/* Wrapper que aplica la rotación de la ficha en fila inversa. Lo hacemos en
+   wrapper (no en .domino) para no chocar con la animación last-played. */
+.tile-wrap {
+  display: inline-flex;
+  line-height: 0;
+}
+.chain-row.reverse .tile-wrap {
+  transform: rotate(180deg);
 }
 .chain:empty::before {
   content: '(mesa vacía)';
