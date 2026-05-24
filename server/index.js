@@ -196,6 +196,9 @@ function finishRound(room, winnerIdx, reason) {
     teams: !!room.teams,
   };
 
+  // Cachear el último summary para reenviarlo si un jugador reconecta.
+  room.lastSummary = summary;
+
   if (matchOver) {
     // Fin de la partida real.
     io.to(room.code).emit('match_over', summary);
@@ -280,9 +283,19 @@ io.on('connection', (socket) => {
     emitRoomUpdate(result.room);
 
     if (result.reconnected) {
-      // Avisamos a todos y reenviamos estado al reconectado.
+      // Avisamos a todos y reenviamos el estado apropiado al reconectado.
       io.to(result.room.code).emit('player_reconnected', { name: cleanName });
-      emitGameState(result.room);
+      const r = result.room;
+      // Siempre mandamos game_state para que la mesa/turnos se actualicen.
+      emitGameState(r);
+      // Si la sala está mostrando el resumen de mano o terminó, también
+      // reenviamos el evento correspondiente para que el cliente caiga en
+      // la vista correcta (sino se quedaría en la vista de juego).
+      if (r.status === 'round_summary' && r.lastSummary) {
+        socket.emit('round_summary', r.lastSummary);
+      } else if (r.status === 'finished' && r.lastSummary) {
+        socket.emit('match_over', r.lastSummary);
+      }
     } else if (result.room.players.length === result.room.maxPlayers &&
                result.room.status === 'waiting') {
       // Arrancamos automáticamente.

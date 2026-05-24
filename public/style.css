@@ -710,24 +710,44 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   .game-header { padding: 0.5rem; }
   .turn { font-size: 1.15rem; }
   .center-col, .right-col { padding: 0.6rem; }
-  /* En móvil los asientos laterales se vuelven angostos para no comerle
-     espacio a la mesa. */
-  .seat-area.side-area { width: 80px; }
-  .player-chip {
-    font-size: 0.8rem;
-    padding: 0.3rem 0.5rem;
+  /* Asientos laterales angostos, chip vertical (nombre encima de fichas). */
+  .seat-area.side-area { width: 72px; }
+  .side-area .player-chip {
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.1rem;
+    padding: 0.25rem 0.35rem;
+    font-size: 0.7rem;
     text-align: center;
+    border-radius: 10px;
+  }
+  .side-area .player-chip .pc-name { font-size: 0.95em; line-height: 1.1; }
+  .side-area .player-chip .pc-tiles { font-size: 0.85em; }
+  .side-area .player-chip .pc-score { font-size: 0.8em; padding: 0 0.3rem; }
+  /* Top y bottom siguen horizontales pero un toque más chicos. */
+  .top-area .player-chip, .bottom-area .player-chip {
+    font-size: 0.85rem;
+    padding: 0.3rem 0.7rem;
   }
   .log { max-height: 180px; font-size: 0.8rem; }
 }
 
 @media (max-width: 500px) {
-  /* En móvil chico, no caben los asientos laterales al costado de la
-     mesa. Los movemos arriba en una fila junto al top. */
-  .middle-area { flex-direction: column; }
-  .seat-area.side-area { width: 100%; }
+  /* En móvil chico, asientos laterales aún más angostos para que la mesa
+     respire. Los 4 chips siguen visibles alrededor de la mesa. */
+  .seat-area.side-area { width: 56px; }
+  .side-area .player-chip {
+    font-size: 0.62rem;
+    padding: 0.2rem 0.25rem;
+  }
+  .top-area .player-chip, .bottom-area .player-chip {
+    font-size: 0.78rem;
+    padding: 0.25rem 0.55rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .seat-area.side-area { width: 48px; }
+  .side-area .player-chip { font-size: 0.58rem; }
 }
 
 @media (max-width: 600px) {

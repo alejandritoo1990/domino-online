@@ -905,6 +905,13 @@
   socket.on('invalid_move', ({ reason }) => {
     showBanner('Jugada inválida: ' + reason, 'err');
     closeEndSelector();
+    // Si el servidor dice que no estás en partida activa pero el cliente
+    // cree que sí (típico post-reconexión donde no se re-linkeó el socket),
+    // re-intentamos el join_room para volver a quedar enlazados.
+    if (reason && reason.includes('No estás en una partida activa') &&
+        hasJoined && myName && myCode) {
+      socket.emit('join_room', { name: myName, code: myCode });
+    }
   });
 
   socket.on('player_disconnected', ({ name, graceSeconds }) => {
