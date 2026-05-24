@@ -44,9 +44,16 @@
     <h2>Sala de espera</h2>
     <p>Comparte este código con tus amigos:</p>
     <div id="room-code" class="code-display">-----</div>
+    <div class="code-actions">
+      <button id="btn-copy-code" type="button">Copiar código</button>
+      <button id="btn-copy-link" type="button">Copiar link</button>
+    </div>
     <p>Jugadores conectados:</p>
     <ul id="waiting-players" class="player-list"></ul>
-    <p class="hint">La partida arranca automáticamente al llegar a 4 jugadores.</p>
+    <p class="hint">La partida arranca automáticamente al llegar al cupo.</p>
+    <div class="waiting-foot">
+      <button id="btn-leave-waiting" type="button" class="leave-btn">Salir de la sala</button>
+    </div>
   </section>
 
   <!-- Vista de juego -->
@@ -55,7 +62,11 @@
       <div id="turn-indicator" class="turn">Esperando...</div>
       <div class="header-meta">
         <span class="round-info">Mano <span id="round-number">1</span> · Meta <span id="target-score">100</span></span>
-        <span class="room-info">Sala: <span id="game-code"></span></span>
+        <span class="room-info">
+          Sala: <span id="game-code"></span>
+          <button id="btn-copy-code-game" type="button" class="copy-mini" title="Copiar código">copiar</button>
+          <button id="btn-leave-game" type="button" class="leave-btn leave-btn-mini">Salir</button>
+        </span>
       </div>
     </header>
 

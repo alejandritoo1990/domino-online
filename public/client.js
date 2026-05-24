@@ -26,11 +26,16 @@
   // Waiting
   const roomCodeEl = document.getElementById('room-code');
   const waitingPlayersEl = document.getElementById('waiting-players');
+  const btnCopyCode = document.getElementById('btn-copy-code');
+  const btnCopyLink = document.getElementById('btn-copy-link');
+  const btnLeaveWaiting = document.getElementById('btn-leave-waiting');
 
   // Game
   const roundNumberEl = document.getElementById('round-number');
   const targetScoreEl = document.getElementById('target-score');
   const gameCodeEl = document.getElementById('game-code');
+  const btnCopyCodeGame = document.getElementById('btn-copy-code-game');
+  const btnLeaveGame = document.getElementById('btn-leave-game');
   const turnIndicator = document.getElementById('turn-indicator');
   const playersListEl = document.getElementById('players-list');
   const chainEl = document.getElementById('table-chain');
@@ -528,12 +533,37 @@
     codeInput.value = pathMatch[1].toUpperCase();
   }
 
+  // Recordar último nombre usado (localStorage).
+  try {
+    const savedName = localStorage.getItem('domino_lastname');
+    if (savedName && !nameInput.value) nameInput.value = savedName;
+  } catch (e) { /* ignore */ }
+
+  // Auto-focus al campo apropiado.
+  setTimeout(() => {
+    if (!nameInput.value) nameInput.focus();
+    else if (pathMatch) codeInput.focus();
+    else nameInput.focus();
+  }, 50);
+
+  // Enter en cualquier input dispara la acción correspondiente.
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (codeInput.value.trim()) btnJoin.click();
+      else btnCreate.click();
+    }
+  });
+  codeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') btnJoin.click();
+  });
+
   // ===== Acciones del lobby =====
   btnCreate.addEventListener('click', () => {
     clearError();
     const name = nameInput.value.trim();
     if (!name) { showError('Ingresa tu nombre'); return; }
     myName = name;
+    rememberName(name);
     const mode = (modeSelect && modeSelect.value === '2p') ? '2p' : '4p';
     btnCreate.disabled = true;
     btnJoin.disabled = true;
@@ -548,10 +578,76 @@
     if (!code) { showError('Ingresa el código de la sala'); return; }
     myName = name;
     myCode = code;
+    rememberName(name);
     btnCreate.disabled = true;
     btnJoin.disabled = true;
     socket.emit('join_room', { name, code });
   });
+
+  // ===== Helpers de copiar / salir =====
+  function rememberName(name) {
+    try { localStorage.setItem('domino_lastname', name); } catch (e) {}
+  }
+
+  function copyText(text, btn) {
+    const fallback = () => {
+      // Fallback para navegadores viejos / contextos no seguros (no HTTPS)
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).catch(fallback);
+    } else {
+      fallback();
+    }
+    if (btn) {
+      const original = btn.textContent;
+      btn.textContent = 'copiado!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('copied');
+      }, 1500);
+    }
+  }
+
+  function leaveRoom() {
+    if (!confirm('¿Salir de la sala? Si la partida está en curso, los demás serán notificados.')) return;
+    // Limpiar localStorage de sala y volver al lobby con reload limpio.
+    window.location.href = '/';
+  }
+
+  // Sala de espera
+  if (btnCopyCode) {
+    btnCopyCode.addEventListener('click', () => {
+      copyText(myCode || roomCodeEl.textContent, btnCopyCode);
+    });
+  }
+  if (btnCopyLink) {
+    btnCopyLink.addEventListener('click', () => {
+      const url = window.location.origin + '/room/' + (myCode || roomCodeEl.textContent);
+      copyText(url, btnCopyLink);
+    });
+  }
+  if (btnLeaveWaiting) {
+    btnLeaveWaiting.addEventListener('click', leaveRoom);
+  }
+
+  // Vista de juego
+  if (btnCopyCodeGame) {
+    btnCopyCodeGame.addEventListener('click', () => {
+      copyText(myCode || gameCodeEl.textContent, btnCopyCodeGame);
+    });
+  }
+  if (btnLeaveGame) {
+    btnLeaveGame.addEventListener('click', leaveRoom);
+  }
 
   // ===== Acciones del juego =====
   btnPlayLeft.addEventListener('click', () => {

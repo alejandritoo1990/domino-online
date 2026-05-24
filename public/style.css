@@ -98,6 +98,52 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   user-select: all;
 }
 
+.code-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.waiting-foot {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.leave-btn {
+  background: #6a3a3a;
+  color: #fff;
+}
+.leave-btn:hover:not(:disabled) { background: #7a4444; }
+.leave-btn-mini {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.55rem;
+  min-height: 28px;
+  background: #5a2e2e;
+  margin-left: 0.4rem;
+}
+.leave-btn-mini:hover:not(:disabled) { background: #7a4444; }
+
+.copy-mini {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  background: #3a3a3a;
+  color: #ccc;
+  min-height: 26px;
+  margin-left: 0.3rem;
+}
+.copy-mini:hover:not(:disabled) {
+  background: #4a4a4a;
+  color: #fff;
+}
+.copy-mini.copied,
+#btn-copy-code.copied,
+#btn-copy-link.copied {
+  background: #3b7;
+  color: #fff;
+}
+
 .player-list { list-style: none; padding: 0; margin: 0.5rem 0; }
 .player-list li {
   background: #2a2a2a;
