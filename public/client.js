@@ -37,10 +37,13 @@
   const btnCopyCodeGame = document.getElementById('btn-copy-code-game');
   const btnLeaveGame = document.getElementById('btn-leave-game');
   const turnIndicator = document.getElementById('turn-indicator');
-  const playersListEl = document.getElementById('players-list');
   const chainEl = document.getElementById('table-chain');
   const endLeftEl = document.getElementById('end-left');
   const endRightEl = document.getElementById('end-right');
+  const seatTopEl = document.getElementById('seat-top');
+  const seatLeftEl = document.getElementById('seat-left');
+  const seatRightEl = document.getElementById('seat-right');
+  const seatBottomEl = document.getElementById('seat-bottom');
   const handEl = document.getElementById('hand');
   const btnPass = document.getElementById('btn-pass');
   const btnDraw = document.getElementById('btn-draw');
@@ -393,35 +396,70 @@
     }
   }
 
+  // Construye un chip con info del jugador.
+  function buildPlayerChip(p, i, turnIdx) {
+    const chip = document.createElement('div');
+    chip.className = 'player-chip';
+
+    const youMark = p.name === myName ? ' (tú)' : '';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'pc-name';
+    nameSpan.textContent = p.name + youMark;
+
+    const tilesSpan = document.createElement('span');
+    tilesSpan.className = 'pc-tiles';
+    tilesSpan.textContent = `${p.tilesLeft} fichas`;
+
+    chip.appendChild(nameSpan);
+    chip.appendChild(tilesSpan);
+
+    if (p.score !== undefined) {
+      const scoreSpan = document.createElement('span');
+      scoreSpan.className = 'pc-score';
+      scoreSpan.textContent = `${p.score} pts`;
+      chip.appendChild(scoreSpan);
+    }
+
+    if (i === turnIdx) chip.classList.add('current-turn');
+    if (!p.connected) chip.classList.add('disconnected');
+    if (p.name === myName) chip.classList.add('you');
+    if (teamsMode) chip.classList.add(i % 2 === 0 ? 'team-a' : 'team-b');
+    return chip;
+  }
+
+  // Coloca a cada jugador en un asiento alrededor de la mesa:
+  //  - YO siempre en BOTTOM
+  //  - +1 (siguiente en turno) → LEFT
+  //  - +2 (cruzando la mesa)  → TOP (partner en 2v2)
+  //  - +3                      → RIGHT
+  // En modo 2p, solo BOTTOM (yo) y TOP (oponente).
   function renderPlayers(players, turnIdx) {
-    playersListEl.innerHTML = '';
+    [seatTopEl, seatLeftEl, seatRightEl, seatBottomEl].forEach(el => {
+      if (el) el.innerHTML = '';
+    });
+    const N = players.length;
+    if (N === 0) return;
+    const myIdx = players.findIndex(p => p.name === myName);
+    if (myIdx === -1) {
+      // Fallback (no debería pasar): pongo todos en seat-top.
+      players.forEach((p, i) => {
+        if (seatTopEl) seatTopEl.appendChild(buildPlayerChip(p, i, turnIdx));
+      });
+      return;
+    }
+
     players.forEach((p, i) => {
-      const li = document.createElement('li');
-      const youMark = p.name === myName ? ' (tú)' : '';
-
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'pc-name';
-      nameSpan.textContent = p.name + youMark;
-
-      const tilesSpan = document.createElement('span');
-      tilesSpan.className = 'pc-tiles';
-      tilesSpan.textContent = `${p.tilesLeft} fichas`;
-
-      li.appendChild(nameSpan);
-      li.appendChild(tilesSpan);
-
-      if (p.score !== undefined) {
-        const scoreSpan = document.createElement('span');
-        scoreSpan.className = 'pc-score';
-        scoreSpan.textContent = `${p.score} pts`;
-        li.appendChild(scoreSpan);
+      const offset = ((i - myIdx) + N) % N;
+      let target = null;
+      if (N === 2) {
+        target = (offset === 0) ? seatBottomEl : seatTopEl;
+      } else {
+        const seats = [seatBottomEl, seatLeftEl, seatTopEl, seatRightEl];
+        target = seats[offset] || null;
       }
-
-      if (i === turnIdx) li.classList.add('current-turn');
-      if (!p.connected) li.classList.add('disconnected');
-      if (p.name === myName) li.classList.add('you');
-      if (teamsMode) li.classList.add(i % 2 === 0 ? 'team-a' : 'team-b');
-      playersListEl.appendChild(li);
+      if (!target) return;
+      target.appendChild(buildPlayerChip(p, i, turnIdx));
     });
   }
 

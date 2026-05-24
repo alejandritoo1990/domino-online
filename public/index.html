@@ -73,10 +73,16 @@
     </header>
 
     <div class="game-main">
-      <!-- Barra superior con chips de jugadores -->
-      <div class="players-bar">
-        <ul id="players-list" class="players-chips"></ul>
+      <!-- Asiento de ARRIBA (partner en 2v2, oponente "de frente" en otros modos) -->
+      <div class="seat-area top-area">
+        <div class="seat" id="seat-top"></div>
       </div>
+
+      <!-- Fila central: izquierda + mesa + derecha -->
+      <div class="middle-area">
+        <div class="seat-area side-area">
+          <div class="seat" id="seat-left"></div>
+        </div>
 
       <!-- Mesa principal (vista aérea, grande) -->
       <div class="center-col">
@@ -103,6 +109,16 @@
             <button id="btn-cancel-end">Cancelar</button>
           </div>
         </div>
+      </div>
+
+        <div class="seat-area side-area">
+          <div class="seat" id="seat-right"></div>
+        </div>
+      </div>
+
+      <!-- Asiento de ABAJO (tú) -->
+      <div class="seat-area bottom-area">
+        <div class="seat" id="seat-bottom"></div>
       </div>
 
       <!-- Log lateral en desktop, debajo en mobile -->
