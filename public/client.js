@@ -183,8 +183,9 @@
   // VW/VH = HW/HH rotadas 90° para que las cornerizadas conecten exactas.
   function getTileDims() {
     const w = window.innerWidth;
-    if (w <= 380) return { HW: 52, HH: 26, VW: 26, VH: 52, gap: 1 };
-    if (w <= 600) return { HW: 60, HH: 30, VW: 30, VH: 60, gap: 1 };
+    if (w <= 380) return { HW: 38, HH: 19, VW: 19, VH: 38, gap: 1 };
+    if (w <= 500) return { HW: 44, HH: 22, VW: 22, VH: 44, gap: 1 };
+    if (w <= 700) return { HW: 52, HH: 26, VW: 26, VH: 52, gap: 1 };
     return                 { HW: 80, HH: 40, VW: 40, VH: 80, gap: 1 };
   }
 

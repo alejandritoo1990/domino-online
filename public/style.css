@@ -263,15 +263,18 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   font-size: 0.8em;
 }
 
-/* Mini-fichas físicas en chips de oponentes */
+/* Mini-fichas físicas en chips de oponentes (silueta dominó boca abajo) */
 .mini-tiles {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
   align-items: center;
   justify-content: center;
-  max-width: 110px;
+  max-width: 120px;
 }
+
+/* Mini-ficha HORIZONTAL (top/bottom): ancho > alto, divisor vertical al medio.
+   Como un dominó visto desde arriba acostado en horizontal. */
 .mini-tile {
   width: 14px;
   height: 7px;
@@ -285,25 +288,36 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
     inset 0 1px 0 rgba(255,255,255,0.55);
 }
 .mini-tile::after {
-  /* Línea divisoria del medio (estilo dominó boca-abajo) */
   content: '';
   position: absolute;
-  top: 50%;
-  left: 1px;
-  right: 1px;
-  height: 1px;
-  background: rgba(58, 45, 24, 0.5);
-  transform: translateY(-0.5px);
+  background: rgba(58, 45, 24, 0.6);
+  /* divisor vertical (separa las dos mitades izq/der de la ficha horizontal) */
+  left: 50%;
+  top: 1px;
+  bottom: 1px;
+  width: 1px;
+  transform: translateX(-0.5px);
 }
 
-/* En chips laterales (vertical), mini-fichas en grid wrap más compacto */
+/* En chips laterales: las mini-fichas se rotan 90°. El jugador a tu izquierda
+   o derecha sostiene sus fichas verticalmente desde tu perspectiva. */
+.side-area .mini-tile {
+  width: 7px;
+  height: 14px;
+}
+.side-area .mini-tile::after {
+  /* Divisor horizontal (ficha vertical: mitad superior + mitad inferior) */
+  left: 1px;
+  right: 1px;
+  top: 50%;
+  bottom: auto;
+  width: auto;
+  height: 1px;
+  transform: translateY(-0.5px);
+}
 .side-area .mini-tiles {
   max-width: 100%;
   gap: 1px;
-}
-.side-area .mini-tile {
-  width: 10px;
-  height: 5px;
 }
 
 /* ====== Hand section (mano del jugador) ====== */
@@ -740,7 +754,7 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 
 /* ====== Responsive móvil ====== */
 @media (max-width: 900px) {
-  body { padding: 0.5rem; }
+  body { padding: 0.3rem; }
   .game-main {
     grid-template-columns: 1fr;
     grid-template-areas:
@@ -748,13 +762,14 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
       "middle"
       "bottom"
       "right";
-    gap: 0.4rem;
+    gap: 0.3rem;
   }
-  .game-header { padding: 0.5rem; }
-  .turn { font-size: 1.15rem; }
-  .center-col, .right-col { padding: 0.6rem; }
+  .game-header { padding: 0.4rem 0.5rem; }
+  .turn { font-size: 1.1rem; }
+  .center-col, .right-col { padding: 0.4rem; }
   /* Asientos laterales angostos, chip vertical (nombre encima de fichas). */
-  .seat-area.side-area { width: 72px; }
+  .seat-area.side-area { width: 60px; }
+  .middle-area { gap: 0.25rem; }
   .side-area .player-chip {
     flex-direction: column;
     gap: 0.1rem;
@@ -766,8 +781,9 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   .side-area .player-chip .pc-name { font-size: 0.95em; line-height: 1.1; }
   .side-area .player-chip .pc-tiles { font-size: 0.85em; }
   .side-area .player-chip .pc-score { font-size: 0.8em; padding: 0 0.3rem; }
-  .side-area .mini-tile { width: 8px; height: 4px; }
+  /* Mini-fichas más chicas en móvil. Top/bottom: horizontales. Side: verticales. */
   .top-area .mini-tile, .bottom-area .mini-tile { width: 12px; height: 6px; }
+  .side-area .mini-tile { width: 6px; height: 12px; }
   /* Top y bottom siguen horizontales pero un toque más chicos. */
   .top-area .player-chip, .bottom-area .player-chip {
     font-size: 0.85rem;
@@ -777,47 +793,56 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 }
 
 @media (max-width: 500px) {
-  /* En móvil chico, asientos laterales aún más angostos para que la mesa
-     respire. Los 4 chips siguen visibles alrededor de la mesa. */
-  .seat-area.side-area { width: 56px; }
+  body { padding: 0.2rem; }
+  .seat-area.side-area { width: 48px; }
   .side-area .player-chip {
     font-size: 0.62rem;
-    padding: 0.2rem 0.25rem;
+    padding: 0.2rem 0.2rem;
   }
-  .side-area .mini-tile { width: 7px; height: 4px; }
   .top-area .player-chip, .bottom-area .player-chip {
     font-size: 0.78rem;
     padding: 0.25rem 0.55rem;
   }
-  .top-area .mini-tile, .bottom-area .mini-tile { width: 10px; height: 5px; }
+  .center-col, .right-col { padding: 0.25rem; }
 }
 
 @media (max-width: 380px) {
-  .seat-area.side-area { width: 48px; }
-  .side-area .player-chip { font-size: 0.58rem; }
+  .seat-area.side-area { width: 42px; }
+  .side-area .player-chip { font-size: 0.58rem; padding: 0.15rem; }
+  .top-area .mini-tile, .bottom-area .mini-tile { width: 10px; height: 5px; }
+  .side-area .mini-tile { width: 5px; height: 10px; }
 }
 
-@media (max-width: 600px) {
-  .domino.h { width: 60px; height: 30px; }
-  .domino.h.double { width: 30px; height: 60px; }
-  .domino.v { width: 30px; height: 60px; }
+@media (max-width: 700px) {
+  .domino.h { width: 52px; height: 26px; }
+  .domino.h.double { width: 26px; height: 52px; }
+  .domino.v { width: 26px; height: 52px; }
   .dot { width: 5px; height: 5px; }
-  .tile-btn { width: 36px; height: 72px; min-height: 72px; }
+  .tile-btn { width: 34px; height: 68px; min-height: 68px; }
   .tile-btn .dot { width: 5px; height: 5px; }
-
-  .chain { padding: 0; height: 420px; }
+  .chain { padding: 0; height: 360px; }
   .ends-info { font-size: 0.9rem; padding: 0.35rem; gap: 0.3rem; }
-
   .code-display { font-size: 1.8rem; padding: 0.6rem; }
-
   h2 { font-size: 1.2rem; }
   h3 { font-size: 1rem; }
 }
 
+@media (max-width: 500px) {
+  .domino.h { width: 44px; height: 22px; }
+  .domino.h.double { width: 22px; height: 44px; }
+  .domino.v { width: 22px; height: 44px; }
+  .dot { width: 4px; height: 4px; }
+  .tile-btn { width: 30px; height: 60px; min-height: 60px; }
+  .tile-btn .dot { width: 4px; height: 4px; }
+  .chain { height: 320px; }
+}
+
 @media (max-width: 380px) {
-  .domino.h { width: 52px; height: 26px; }
-  .domino.h.double { width: 26px; height: 52px; }
-  .domino.v { width: 26px; height: 52px; }
-  .tile-btn { width: 32px; height: 64px; min-height: 64px; }
-  .chain { height: 380px; }
+  .domino.h { width: 38px; height: 19px; }
+  .domino.h.double { width: 19px; height: 38px; }
+  .domino.v { width: 19px; height: 38px; }
+  .dot { width: 3px; height: 3px; }
+  .tile-btn { width: 26px; height: 52px; min-height: 52px; }
+  .tile-btn .dot { width: 3px; height: 3px; }
+  .chain { height: 290px; }
 }
