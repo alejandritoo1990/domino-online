@@ -183,9 +183,9 @@
   // VW/VH = HW/HH rotadas 90° para que las cornerizadas conecten exactas.
   function getTileDims() {
     const w = window.innerWidth;
-    if (w <= 380) return { HW: 38, HH: 19, VW: 19, VH: 38, gap: 1 };
-    if (w <= 500) return { HW: 44, HH: 22, VW: 22, VH: 44, gap: 1 };
-    if (w <= 700) return { HW: 52, HH: 26, VW: 26, VH: 52, gap: 1 };
+    if (w <= 380) return { HW: 44, HH: 22, VW: 22, VH: 44, gap: 1 };
+    if (w <= 500) return { HW: 52, HH: 26, VW: 26, VH: 52, gap: 1 };
+    if (w <= 700) return { HW: 60, HH: 30, VW: 30, VH: 60, gap: 1 };
     return                 { HW: 80, HH: 40, VW: 40, VH: 80, gap: 1 };
   }
 
@@ -339,8 +339,8 @@
       }
     }
 
-    endLeftEl.textContent = ends.left === null ? '-' : ends.left;
-    endRightEl.textContent = ends.right === null ? '-' : ends.right;
+    if (endLeftEl) endLeftEl.textContent = ends.left === null ? '-' : ends.left;
+    if (endRightEl) endRightEl.textContent = ends.right === null ? '-' : ends.right;
   }
 
   function emitPlayWithEnd(end) {
@@ -397,9 +397,9 @@
     }
   }
 
-  // Construye un chip con info del jugador.
-  // Para los oponentes (no-yo) muestra mini-fichas físicas en lugar del
-  // texto "X fichas", así se ve visualmente cuántas le quedan a cada uno.
+  // Construye un chip con info del jugador: nombre + badge con número de
+  // fichas restantes. Los puntos NO se muestran en el chip durante la
+  // partida — se ven en el resumen de mano y en el scoreboard final.
   function buildPlayerChip(p, i, turnIdx) {
     const chip = document.createElement('div');
     chip.className = 'player-chip';
@@ -410,31 +410,11 @@
     nameSpan.textContent = p.name + (isMe ? ' (tú)' : '');
     chip.appendChild(nameSpan);
 
-    if (isMe) {
-      // Yo: solo texto, porque mi mano real está abajo.
-      const tilesSpan = document.createElement('span');
-      tilesSpan.className = 'pc-tiles';
-      tilesSpan.textContent = `${p.tilesLeft} fichas`;
-      chip.appendChild(tilesSpan);
-    } else {
-      // Otros: mini-fichas físicas (boca abajo, color crema con línea media).
-      const tilesWrap = document.createElement('div');
-      tilesWrap.className = 'mini-tiles';
-      tilesWrap.title = `${p.tilesLeft} fichas`;
-      for (let k = 0; k < p.tilesLeft; k++) {
-        const t = document.createElement('div');
-        t.className = 'mini-tile';
-        tilesWrap.appendChild(t);
-      }
-      chip.appendChild(tilesWrap);
-    }
-
-    if (p.score !== undefined) {
-      const scoreSpan = document.createElement('span');
-      scoreSpan.className = 'pc-score';
-      scoreSpan.textContent = `${p.score} pts`;
-      chip.appendChild(scoreSpan);
-    }
+    const badge = document.createElement('span');
+    badge.className = 'pc-badge';
+    badge.textContent = p.tilesLeft;
+    badge.title = `${p.tilesLeft} fichas`;
+    chip.appendChild(badge);
 
     if (i === turnIdx) chip.classList.add('current-turn');
     if (!p.connected) chip.classList.add('disconnected');
