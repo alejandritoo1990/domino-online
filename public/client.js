@@ -140,14 +140,25 @@
     return el;
   }
 
-  // Crea un botón clickeable con la anatomía de una ficha vertical (para la mano).
+  // Crea un elemento clickeable con la anatomía de una ficha vertical (para
+  // la mano). Usamos un div (no un <button>) para evitar estilos por defecto
+  // del navegador en móvil (iOS Safari pintaba el fondo de verde sobre los
+  // dobles blancos).
   function makeTileButton(tile) {
-    const btn = document.createElement('button');
+    const btn = document.createElement('div');
     btn.className = 'tile-btn';
+    btn.setAttribute('role', 'button');
+    btn.setAttribute('tabindex', '0');
     btn.appendChild(makeHalf(tile[0]));
     btn.appendChild(makeHalf(tile[1]));
     btn.setAttribute('aria-label', tileTxt(tile));
     btn.title = tileTxt(tile);
+    // Polyfill de "disabled" para div: lo expongo como propiedad.
+    Object.defineProperty(btn, 'disabled', {
+      get() { return btn.classList.contains('disabled'); },
+      set(v) { btn.classList.toggle('disabled', !!v); },
+      configurable: true,
+    });
     return btn;
   }
 

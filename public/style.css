@@ -448,7 +448,8 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 
 /* Botón de ficha en la mano (más compacto que en la mesa) */
 .tile-btn {
-  background: linear-gradient(145deg, #fbf6e1 0%, #ebe2c5 100%);
+  background-color: #f3e9c1;
+  background-image: linear-gradient(145deg, #fbf6e1 0%, #ebe2c5 100%);
   border: 1.5px solid #3a2d18;
   border-radius: 5px;
   padding: 0;
@@ -464,18 +465,30 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   flex-direction: column;
   flex-shrink: 0;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
+  color: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  outline: none;
 }
 .tile-btn .dot { width: 6px; height: 6px; }
-.tile-btn:hover:not(:disabled) {
+.tile-btn:focus { outline: none; }
+.tile-btn:hover:not(.disabled) {
   transform: translateY(-5px);
   box-shadow:
     0 8px 10px rgba(0,0,0,0.45),
     inset 0 1px 0 rgba(255,255,255,0.7);
 }
-.tile-btn:active:not(:disabled) {
+.tile-btn:active:not(.disabled) {
   transform: translateY(-2px);
 }
-.tile-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.tile-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 .tile-btn.playable {
   border-color: #3b7;
   box-shadow:
