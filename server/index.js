@@ -49,6 +49,7 @@ function publicRoomState(room) {
     status: room.status,
     mode: room.mode,
     maxPlayers: room.maxPlayers,
+    teams: !!room.teams,
     players: room.players.map(p => ({
       name: p.name,
       connected: p.connected,
@@ -67,19 +68,28 @@ function publicGameState(room) {
     ends,
     turn: room.turn,
     turnName: room.players[room.turn] ? room.players[room.turn].name : null,
-    players: room.players.map((p, i) => ({
-      name: p.name,
-      connected: p.connected,
-      tilesLeft: p.hand.length,
-      score: room.scoreboard ? room.scoreboard[i] : 0,
-    })),
+    players: room.players.map((p, i) => {
+      // En 2v2 el "score" individual muestra el del equipo del jugador.
+      const score = room.scoreboard
+        ? (room.teams ? room.scoreboard[i % 2] : room.scoreboard[i])
+        : 0;
+      return {
+        name: p.name,
+        connected: p.connected,
+        tilesLeft: p.hand.length,
+        team: room.teams ? (i % 2) : null,
+        score,
+      };
+    }),
     log: room.log,
     lastMove: room.lastMove || null,
-    scoreboard: room.scoreboard || new Array(room.maxPlayers).fill(0),
+    scoreboard: room.scoreboard
+      || new Array(room.teams ? 2 : room.maxPlayers).fill(0),
     targetScore: room.targetScore || 100,
     roundNumber: room.roundNumber || 1,
     mode: room.mode,
     maxPlayers: room.maxPlayers,
+    teams: !!room.teams,
     boneyardCount: (room.boneyard || []).length,
   };
 }
@@ -136,24 +146,45 @@ function finishRound(room, winnerIdx, reason) {
     points: game.handPoints(p.hand),
     tilesLeft: p.hand.length,
   }));
+
+  const winnerTeam = room.teams ? (winnerIdx % 2) : null;
+
+  // En modo parejas, los puntos son la suma de pips del equipo PERDEDOR;
+  // en individual, la suma de pips de TODOS los demás jugadores.
   for (let i = 0; i < room.maxPlayers; i++) {
-    if (i !== winnerIdx) pointsAwarded += perPlayer[i].points;
+    if (room.teams) {
+      if (i % 2 !== winnerTeam) pointsAwarded += perPlayer[i].points;
+    } else {
+      if (i !== winnerIdx) pointsAwarded += perPlayer[i].points;
+    }
   }
-  room.scoreboard[winnerIdx] += pointsAwarded;
 
-  const winnerName = room.players[winnerIdx].name;
+  if (room.teams) {
+    room.scoreboard[winnerTeam] += pointsAwarded;
+  } else {
+    room.scoreboard[winnerIdx] += pointsAwarded;
+  }
+
+  const winnerLabel = room.teams
+    ? 'Equipo ' + (winnerTeam === 0 ? 'A' : 'B')
+    : room.players[winnerIdx].name;
+  const winnerScore = room.teams
+    ? room.scoreboard[winnerTeam]
+    : room.scoreboard[winnerIdx];
   const reasonTxt = reason === 'domino'
-    ? `${winnerName} se quedó sin fichas (¡dominó!)`
-    : `Trancado — ${winnerName} tenía menos puntos en mano`;
-  room.log.push(`${reasonTxt}. +${pointsAwarded} pts. Total: ${room.scoreboard[winnerIdx]}`);
+    ? `${room.players[winnerIdx].name} dominó (${winnerLabel} gana la mano)`
+    : `Trancado — gana ${winnerLabel}`;
+  room.log.push(`${reasonTxt}. +${pointsAwarded} pts. Total: ${winnerScore}`);
 
-  const matchOver = room.scoreboard[winnerIdx] >= room.targetScore;
+  const matchOver = winnerScore >= room.targetScore;
   room.status = matchOver ? 'finished' : 'round_summary';
   room.lastRoundWinner = winnerIdx;
 
   const summary = {
     winner: winnerIdx,
-    winnerName,
+    winnerName: winnerLabel,                              // "Equipo A" o nombre
+    winnerPlayerName: room.players[winnerIdx].name,       // siempre el nombre real del jugador
+    winnerTeam: room.teams ? winnerTeam : null,
     reason,
     pointsAwarded,
     perPlayer,
@@ -162,6 +193,7 @@ function finishRound(room, winnerIdx, reason) {
     roundNumber: room.roundNumber,
     matchOver,
     players: room.players.map(p => p.name),
+    teams: !!room.teams,
   };
 
   if (matchOver) {
@@ -192,7 +224,9 @@ io.on('connection', (socket) => {
       socket.emit('error_msg', { message: 'Nombre inválido' });
       return;
     }
-    const cleanMode = (mode === '2p') ? '2p' : '4p';
+    let cleanMode = '4p';
+    if (mode === '2p') cleanMode = '2p';
+    else if (mode === '2v2') cleanMode = '2v2';
     const room = roomsMod.createRoom(cleanName, socket.id, cleanMode);
     socket.join(room.code);
     socket.emit('room_joined', {
@@ -200,6 +234,7 @@ io.on('connection', (socket) => {
       yourName: cleanName,
       mode: room.mode,
       maxPlayers: room.maxPlayers,
+      teams: !!room.teams,
     });
     emitRoomUpdate(room);
   });
@@ -240,6 +275,7 @@ io.on('connection', (socket) => {
       yourName: cleanName,
       mode: result.room.mode,
       maxPlayers: result.room.maxPlayers,
+      teams: !!result.room.teams,
     });
     emitRoomUpdate(result.room);
 
@@ -478,20 +514,34 @@ function checkBlocked(room) {
   if (room.status !== 'playing') return;
   const ends = game.getEnds(room.chain);
   const boneyardEmpty = (room.boneyard || []).length === 0;
-  if (!boneyardEmpty) return;  // en modo 2p, mientras haya pozo no se tranca
-  if (game.isBlocked(room.players.map(p => p.hand), ends)) {
-    // En trancado gana quien tiene menos puntos en mano.
+  if (!boneyardEmpty) return;
+  if (!game.isBlocked(room.players.map(p => p.hand), ends)) return;
+
+  let winnerIdx = 0;
+  if (room.teams) {
+    // En 2v2 gana el EQUIPO con menos pips combinados. Como representante
+    // del equipo (para "quien empieza la siguiente mano") usamos el
+    // jugador del equipo ganador con menos pips individuales.
+    const teamPips = [0, 0];
+    for (let i = 0; i < room.maxPlayers; i++) {
+      teamPips[i % 2] += game.handPoints(room.players[i].hand);
+    }
+    const winningTeam = teamPips[0] <= teamPips[1] ? 0 : 1;
     let minPts = Infinity;
-    let winnerIdx = 0;
+    for (let i = 0; i < room.maxPlayers; i++) {
+      if (i % 2 !== winningTeam) continue;
+      const pts = game.handPoints(room.players[i].hand);
+      if (pts < minPts) { minPts = pts; winnerIdx = i; }
+    }
+  } else {
+    // Individual: gana el jugador con menos puntos en mano.
+    let minPts = Infinity;
     for (let i = 0; i < room.maxPlayers; i++) {
       const pts = game.handPoints(room.players[i].hand);
-      if (pts < minPts) {
-        minPts = pts;
-        winnerIdx = i;
-      }
+      if (pts < minPts) { minPts = pts; winnerIdx = i; }
     }
-    finishRound(room, winnerIdx, 'trancado');
   }
+  finishRound(room, winnerIdx, 'trancado');
 }
 
 server.listen(PORT, () => {

@@ -21,16 +21,24 @@ function generateCode() {
 }
 
 function createRoom(name, socketId, mode) {
-  const maxPlayers = (mode === '2p') ? 2 : 4;
+  let maxPlayers, teams, normalizedMode;
+  if (mode === '2p') {
+    maxPlayers = 2; teams = false; normalizedMode = '2p';
+  } else if (mode === '2v2') {
+    maxPlayers = 4; teams = true;  normalizedMode = '2v2';
+  } else {
+    maxPlayers = 4; teams = false; normalizedMode = '4p';
+  }
   const code = generateCode();
   const room = {
     code,
-    mode: maxPlayers === 2 ? '2p' : '4p',
+    mode: normalizedMode,
     maxPlayers,
+    teams,                       // true → modo parejas (2v2)
     players: [{ socketId, name, connected: true, hand: [] }],
-    status: 'waiting',          // 'waiting' | 'playing' | 'round_summary' | 'finished' | 'cancelled'
+    status: 'waiting',
     chain: [],
-    boneyard: [],               // pozo de fichas para robar (solo modo 2p)
+    boneyard: [],
     turn: 0,
     log: [],
     consecutivePasses: 0,
@@ -112,7 +120,9 @@ function deleteRoom(code) {
 // Inicializa la partida (primera mano). Setea scoreboard, meta y arranca ronda 1
 // usando el doble 6 (o doble más alto disponible) para decidir quién empieza.
 function initGame(room) {
-  room.scoreboard = new Array(room.maxPlayers).fill(0);
+  // En 2v2 el scoreboard guarda 2 entradas (Equipo A y Equipo B);
+  // en modos individuales, una entrada por jugador.
+  room.scoreboard = new Array(room.teams ? 2 : room.maxPlayers).fill(0);
   room.targetScore = 100;
   room.roundNumber = 0;
   room.log = [];

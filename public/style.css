@@ -237,6 +237,8 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 }
 .players-chips li.disconnected { opacity: 0.5; border-color: #f66; }
 .players-chips li.you { font-weight: bold; }
+.players-chips li.team-a { border-left: 5px solid #5aa3f0; }
+.players-chips li.team-b { border-left: 5px solid #ef7373; }
 .players-chips .pc-name { color: #e6e6e6; }
 .players-chips .pc-tiles { color: #999; font-size: 0.85em; }
 .players-chips .pc-score {
@@ -627,6 +629,15 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 }
 .scoreboard li.winner-mark .sb-score { color: #ffd24a; }
 .scoreboard li.you { font-weight: bold; }
+.scoreboard li.team-a { border-left: 5px solid #5aa3f0; }
+.scoreboard li.team-b { border-left: 5px solid #ef7373; }
+
+.mode-hint {
+  color: #999;
+  font-size: 0.85rem;
+  margin: 0.2rem 0 0.4rem;
+  font-style: italic;
+}
 
 /* Puntos junto al nombre en la lista de jugadores in-game */
 .players-list .pl-score {

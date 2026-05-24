@@ -83,6 +83,7 @@
   let countdownDeadline = 0;
   let targetScore = 100;
   let maxPlayers = 4;
+  let teamsMode = false;
 
   // ===== Utilidades =====
   function showView(name) {
@@ -419,14 +420,49 @@
       if (i === turnIdx) li.classList.add('current-turn');
       if (!p.connected) li.classList.add('disconnected');
       if (p.name === myName) li.classList.add('you');
+      if (teamsMode) li.classList.add(i % 2 === 0 ? 'team-a' : 'team-b');
       playersListEl.appendChild(li);
     });
   }
 
-  // Renderiza un scoreboard (lista de jugadores con barra de progreso a la meta).
-  // mark: índice del ganador a destacar, o -1.
-  function renderScoreboard(container, players, scoreboard, mark, target) {
+  // Renderiza un scoreboard (lista con barra de progreso a la meta).
+  // En modo equipos muestra 2 entradas (Equipo A y B); en individual, una por jugador.
+  function renderScoreboard(container, players, scoreboard, mark, target, teams) {
     container.innerHTML = '';
+    if (teams) {
+      const winnerTeam = (mark !== null && mark !== undefined && mark >= 0) ? (mark % 2) : -1;
+      for (let teamIdx = 0; teamIdx < 2; teamIdx++) {
+        const score = scoreboard[teamIdx] || 0;
+        const members = players.filter((_, i) => i % 2 === teamIdx);
+        const li = document.createElement('li');
+        const youInTeam = members.includes(myName);
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'sb-name';
+        nameSpan.textContent = `Equipo ${teamIdx === 0 ? 'A' : 'B'}` +
+          (youInTeam ? ' (tu equipo)' : '') +
+          ' — ' + members.join(', ');
+        const scoreSpan = document.createElement('span');
+        scoreSpan.className = 'sb-score';
+        scoreSpan.textContent = score + ' / ' + target;
+        li.appendChild(nameSpan);
+        li.appendChild(scoreSpan);
+
+        const bar = document.createElement('div');
+        bar.className = 'sb-bar';
+        const fill = document.createElement('div');
+        fill.className = 'sb-bar-fill';
+        fill.style.width = Math.min(100, (score / target) * 100) + '%';
+        bar.appendChild(fill);
+        li.appendChild(bar);
+
+        li.classList.add(teamIdx === 0 ? 'team-a' : 'team-b');
+        if (teamIdx === winnerTeam) li.classList.add('winner-mark');
+        if (youInTeam) li.classList.add('you');
+        container.appendChild(li);
+      }
+      return;
+    }
+    // Modo individual.
     scoreboard.forEach((score, i) => {
       const li = document.createElement('li');
       const name = players[i] || `Jugador ${i + 1}`;
@@ -564,7 +600,8 @@
     if (!name) { showError('Ingresa tu nombre'); return; }
     myName = name;
     rememberName(name);
-    const mode = (modeSelect && modeSelect.value === '2p') ? '2p' : '4p';
+    const modeRaw = modeSelect ? modeSelect.value : '4p';
+    const mode = (modeRaw === '2p' || modeRaw === '2v2') ? modeRaw : '4p';
     btnCreate.disabled = true;
     btnJoin.disabled = true;
     socket.emit('create_room', { name, mode });
@@ -717,11 +754,12 @@
   }
 
   // ===== Eventos socket =====
-  socket.on('room_joined', ({ code, yourName, maxPlayers: mp }) => {
+  socket.on('room_joined', ({ code, yourName, maxPlayers: mp, teams }) => {
     myCode = code;
     myName = yourName;
     hasJoined = true;
     if (mp) maxPlayers = mp;
+    if (teams !== undefined) teamsMode = !!teams;
     roomCodeEl.textContent = code;
     gameCodeEl.textContent = code;
     setUrl(code);
@@ -760,6 +798,7 @@
   });
 
   function applyGameState(state) {
+    if (state.teams !== undefined) teamsMode = !!state.teams;
     renderChain(state.chain, state.ends, state.lastMove);
     renderPlayers(state.players, state.turn);
     renderLog(state.log);
@@ -845,14 +884,21 @@
     closeEndSelector();
     yourTurn = false;
     showView('round-summary');
-    rsTitle.textContent = data.winnerName === myName
+    // En 2v2 el ganador es el equipo, pero también queremos saber si TU
+    // equipo ganó.
+    let won = (data.winnerName === myName);
+    if (data.teams && data.winnerTeam !== null) {
+      const myIdx = data.players.indexOf(myName);
+      if (myIdx !== -1 && myIdx % 2 === data.winnerTeam) won = true;
+    }
+    rsTitle.textContent = won
       ? `¡Ganaste la mano ${data.roundNumber}!`
       : `Mano ${data.roundNumber}: ganó ${data.winnerName}`;
     rsReason.textContent = data.reason === 'domino'
-      ? 'Se quedó sin fichas (dominó)'
+      ? `${data.winnerPlayerName || data.winnerName} se quedó sin fichas (dominó)`
       : 'Trancado — menor cantidad de puntos en mano';
     rsPoints.textContent = `+${data.pointsAwarded} puntos a ${data.winnerName}`;
-    renderScoreboard(rsScoreboard, data.players, data.scoreboard, data.winner, data.targetScore);
+    renderScoreboard(rsScoreboard, data.players, data.scoreboard, data.winner, data.targetScore, data.teams);
     btnReady.disabled = false;
     btnReady.textContent = 'Listo para la siguiente mano';
     startCountdown(15);
@@ -866,11 +912,20 @@
   socket.on('match_over', (data) => {
     stopCountdown();
     showView('over');
-    overTitle.textContent = data.winnerName === myName
+    let won = (data.winnerName === myName);
+    if (data.teams && data.winnerTeam !== null) {
+      const myIdx = data.players.indexOf(myName);
+      if (myIdx !== -1 && myIdx % 2 === data.winnerTeam) won = true;
+    }
+    overTitle.textContent = won
       ? '¡Ganaste la partida!'
       : `Ganó la partida: ${data.winnerName}`;
-    overReason.textContent = `${data.winnerName} alcanzó ${data.scoreboard[data.winner]} puntos en ${data.roundNumber} manos`;
-    renderScoreboard(overScores, data.players, data.scoreboard, data.winner, data.targetScore);
+    // Para "alcanzó X puntos" usamos el score correcto (equipo o jugador).
+    const winnerScore = data.teams
+      ? data.scoreboard[data.winnerTeam]
+      : data.scoreboard[data.winner];
+    overReason.textContent = `${data.winnerName} alcanzó ${winnerScore} puntos en ${data.roundNumber} manos`;
+    renderScoreboard(overScores, data.players, data.scoreboard, data.winner, data.targetScore, data.teams);
   });
 
   // game_over solo llega ahora cuando la partida se cancela (desconexión).
