@@ -317,12 +317,26 @@
 
     // Si estamos eligiendo extremo, resaltar las puntas de la cadena.
     if (choosingEnd && positions.length > 0) {
-      addEndTarget(positions[0], 'left');
-      addEndTarget(positions[positions.length - 1], 'right');
+      if (positions.length === 1) {
+        // Con una sola ficha en la mesa, los dos extremos están en la misma
+        // ficha. Mostramos los targets a los COSTADOS (izquierda y derecha)
+        // para que el usuario pueda elegir claramente.
+        addEndTargetSide(positions[0], 'left');
+        addEndTargetSide(positions[0], 'right');
+      } else {
+        addEndTarget(positions[0], 'left');
+        addEndTarget(positions[positions.length - 1], 'right');
+      }
     }
 
     endLeftEl.textContent = ends.left === null ? '-' : ends.left;
     endRightEl.textContent = ends.right === null ? '-' : ends.right;
+  }
+
+  function emitPlayWithEnd(end) {
+    if (!pendingTile) { cancelChooseEnd(); return; }
+    socket.emit('play_tile', { tile: pendingTile, end });
+    cancelChooseEnd();
   }
 
   function addEndTarget(pos, end) {
@@ -336,9 +350,31 @@
     overlay.style.height = (pos.th + 2 * pad) + 'px';
     overlay.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!pendingTile) { cancelChooseEnd(); return; }
-      socket.emit('play_tile', { tile: pendingTile, end });
-      cancelChooseEnd();
+      emitPlayWithEnd(end);
+    });
+    chainEl.appendChild(overlay);
+  }
+
+  // Target colocado AL LADO de la ficha (a la izquierda o a la derecha),
+  // útil cuando la cadena tiene una sola ficha y los dos extremos coinciden.
+  function addEndTargetSide(pos, end) {
+    const overlay = document.createElement('div');
+    overlay.className = 'end-target';
+    overlay.dataset.end = end;
+    const targetW = Math.max(60, pos.tw);
+    const margin = 6;
+    const pad = 8;
+    if (end === 'left') {
+      overlay.style.left = (pos.x - targetW - margin) + 'px';
+    } else {
+      overlay.style.left = (pos.x + pos.tw + margin) + 'px';
+    }
+    overlay.style.top = (pos.y - pad) + 'px';
+    overlay.style.width = targetW + 'px';
+    overlay.style.height = (pos.th + 2 * pad) + 'px';
+    overlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      emitPlayWithEnd(end);
     });
     chainEl.appendChild(overlay);
   }
