@@ -417,14 +417,21 @@
 
       btn.addEventListener('click', () => {
         btn.blur();
+        // Si la mesa está vacía (primera ficha de la partida), no tiene
+        // sentido preguntar dónde: simplemente la abrimos.
+        const chainEmpty = !lastChainData
+          || !lastChainData.chain
+          || lastChainData.chain.length === 0;
+        if (chainEmpty) {
+          socket.emit('play_tile', { tile: t, end: 'right' });
+          return;
+        }
         if (entry.canPlay.left && entry.canPlay.right) {
           // Modo "elegir extremo": resaltamos las puntas de la cadena en la
           // mesa y el usuario hace click en la que prefiera.
           pendingTile = t;
           choosingEnd = true;
-          if (lastChainData) {
-            renderChain(lastChainData.chain, lastChainData.ends, lastChainData.lastMove);
-          }
+          renderChain(lastChainData.chain, lastChainData.ends, lastChainData.lastMove);
         } else if (entry.canPlay.left) {
           socket.emit('play_tile', { tile: t, end: 'left' });
         } else if (entry.canPlay.right) {
