@@ -70,7 +70,8 @@
   let myCode = '';
   let lastHand = [];           // [{tile:[a,b], canPlay:{left,right}}]
   let yourTurn = false;
-  let pendingTile = null;
+  let pendingTile = null;       // ficha clickeada esperando elección de extremo
+  let choosingEnd = false;      // estamos en modo "click izq o der en la mesa"
   let bannerTimer = null;
   let hasJoined = false;       // ¿ya entramos a una sala en este socket?
   let countdownTimer = null;
@@ -230,7 +231,9 @@
       if (dir === 'left'  && curX - tw < minBoundX) overflow = true;
 
       if (overflow) {
-        // Esta ficha pasa a ser la corner vertical.
+        // Corner vertical (perpendicular), pegada al bottom real de la última
+        // ficha. Aunque la corner sea un doble, NO ponemos una vertical extra
+        // debajo: la siguiente ficha arranca directo la nueva fila horizontal.
         tw = VW; th = VH; orient = 'v';
         const lastP = positions[positions.length - 1];
         let vx, vy;
@@ -239,31 +242,11 @@
         } else {
           vx = lastP.x;
         }
-        // V pegada al bottom real de la última ficha (sea normal H o doble
-        // perpendicular más alto). Así no se solapa con dobles centrados.
         vy = lastP.y + lastP.th;
         positions.push({ tile, x: vx, y: vy, tw, th, orient, idx: i, flipped: false });
 
-        // ESCENARIO 1: si el corner es un doble, la siguiente ficha va
-        // también vertical debajo del doble (forma columna), y luego el
-        // chain continúa horizontal desde abajo de esa segunda vertical.
-        const cornerIsDouble = tile[0] === tile[1];
-        let nextRowY = vy + VH;
-        if (cornerIsDouble && i + 1 < chain.length) {
-          const extraTile = chain[i + 1];
-          positions.push({
-            tile: extraTile,
-            x: vx, y: vy + VH,
-            tw: VW, th: VH,
-            orient: 'v', idx: i + 1, flipped: false,
-          });
-          nextRowY = vy + 2 * VH;
-          i++;  // consumimos chain[i+1] aquí, el for-loop avanzará a chain[i+2]
-        }
-
-        // Cursor para la siguiente fila (dirección opuesta).
         const newDir = (dir === 'right') ? 'left' : 'right';
-        curY = nextRowY;
+        curY = vy + VH;
         if (newDir === 'right') curX = vx;
         else                    curX = vx + VW;
         dir = newDir;
@@ -321,8 +304,40 @@
       chainEl.appendChild(wrap);
     });
 
+    // Si estamos eligiendo extremo, resaltar las puntas de la cadena.
+    if (choosingEnd && positions.length > 0) {
+      addEndTarget(positions[0], 'left');
+      addEndTarget(positions[positions.length - 1], 'right');
+    }
+
     endLeftEl.textContent = ends.left === null ? '-' : ends.left;
     endRightEl.textContent = ends.right === null ? '-' : ends.right;
+  }
+
+  function addEndTarget(pos, end) {
+    const overlay = document.createElement('div');
+    overlay.className = 'end-target';
+    overlay.dataset.end = end;
+    const pad = 8;
+    overlay.style.left = (pos.x - pad) + 'px';
+    overlay.style.top  = (pos.y - pad) + 'px';
+    overlay.style.width  = (pos.tw + 2 * pad) + 'px';
+    overlay.style.height = (pos.th + 2 * pad) + 'px';
+    overlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!pendingTile) { cancelChooseEnd(); return; }
+      socket.emit('play_tile', { tile: pendingTile, end });
+      cancelChooseEnd();
+    });
+    chainEl.appendChild(overlay);
+  }
+
+  function cancelChooseEnd() {
+    choosingEnd = false;
+    pendingTile = null;
+    if (lastChainData) {
+      renderChain(lastChainData.chain, lastChainData.ends, lastChainData.lastMove);
+    }
   }
 
   function renderPlayers(players, turnIdx) {
@@ -401,9 +416,15 @@
       if (playable) btn.classList.add('playable');
 
       btn.addEventListener('click', () => {
-        btn.blur();  // evitar que iOS Safari deje el botón con estilo "focus" pegado
+        btn.blur();
         if (entry.canPlay.left && entry.canPlay.right) {
-          openEndSelector(t);
+          // Modo "elegir extremo": resaltamos las puntas de la cadena en la
+          // mesa y el usuario hace click en la que prefiera.
+          pendingTile = t;
+          choosingEnd = true;
+          if (lastChainData) {
+            renderChain(lastChainData.chain, lastChainData.ends, lastChainData.lastMove);
+          }
         } else if (entry.canPlay.left) {
           socket.emit('play_tile', { tile: t, end: 'left' });
         } else if (entry.canPlay.right) {
@@ -497,6 +518,20 @@
 
   btnDraw.addEventListener('click', () => {
     socket.emit('draw_tile');
+  });
+
+  // Click en cualquier parte de la mesa que no sea un end-target → cancelar.
+  chainEl.addEventListener('click', (e) => {
+    if (choosingEnd && !e.target.closest('.end-target')) {
+      cancelChooseEnd();
+    }
+  });
+
+  // ESC cancela también.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && choosingEnd) {
+      cancelChooseEnd();
+    }
   });
 
   btnHome.addEventListener('click', () => {
@@ -629,7 +664,10 @@
       btnPass.classList.remove('hidden');
       btnPass.disabled = !(yt && canPass);
     }
-    if (!yt) closeEndSelector();
+    if (!yt) {
+      closeEndSelector();
+      if (choosingEnd) cancelChooseEnd();
+    }
     renderHand();
     if (yt) {
       turnIndicator.textContent = 'TU TURNO';

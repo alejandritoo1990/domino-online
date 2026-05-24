@@ -293,6 +293,27 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
 .tile-abs.flipped {
   transform: rotate(180deg);
 }
+
+/* Marcador en las puntas de la cadena cuando hay que elegir dónde jugar */
+.end-target {
+  position: absolute;
+  border: 3px solid #ffd24a;
+  border-radius: 10px;
+  background: rgba(255, 210, 74, 0.18);
+  cursor: pointer;
+  z-index: 10;
+  animation: end-pulse 1s ease-in-out infinite;
+}
+@keyframes end-pulse {
+  0%, 100% {
+    opacity: 0.75;
+    box-shadow: 0 0 0 rgba(255, 210, 74, 0);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 18px rgba(255, 210, 74, 0.6);
+  }
+}
 .chain:empty::before {
   content: '(mesa vacía)';
   color: #6a8a78;
