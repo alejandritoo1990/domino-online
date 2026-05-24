@@ -397,22 +397,36 @@
   }
 
   // Construye un chip con info del jugador.
+  // Para los oponentes (no-yo) muestra mini-fichas físicas en lugar del
+  // texto "X fichas", así se ve visualmente cuántas le quedan a cada uno.
   function buildPlayerChip(p, i, turnIdx) {
     const chip = document.createElement('div');
     chip.className = 'player-chip';
-
-    const youMark = p.name === myName ? ' (tú)' : '';
+    const isMe = p.name === myName;
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'pc-name';
-    nameSpan.textContent = p.name + youMark;
-
-    const tilesSpan = document.createElement('span');
-    tilesSpan.className = 'pc-tiles';
-    tilesSpan.textContent = `${p.tilesLeft} fichas`;
-
+    nameSpan.textContent = p.name + (isMe ? ' (tú)' : '');
     chip.appendChild(nameSpan);
-    chip.appendChild(tilesSpan);
+
+    if (isMe) {
+      // Yo: solo texto, porque mi mano real está abajo.
+      const tilesSpan = document.createElement('span');
+      tilesSpan.className = 'pc-tiles';
+      tilesSpan.textContent = `${p.tilesLeft} fichas`;
+      chip.appendChild(tilesSpan);
+    } else {
+      // Otros: mini-fichas físicas (boca abajo, color crema con línea media).
+      const tilesWrap = document.createElement('div');
+      tilesWrap.className = 'mini-tiles';
+      tilesWrap.title = `${p.tilesLeft} fichas`;
+      for (let k = 0; k < p.tilesLeft; k++) {
+        const t = document.createElement('div');
+        t.className = 'mini-tile';
+        tilesWrap.appendChild(t);
+      }
+      chip.appendChild(tilesWrap);
+    }
 
     if (p.score !== undefined) {
       const scoreSpan = document.createElement('span');
@@ -423,7 +437,7 @@
 
     if (i === turnIdx) chip.classList.add('current-turn');
     if (!p.connected) chip.classList.add('disconnected');
-    if (p.name === myName) chip.classList.add('you');
+    if (isMe) chip.classList.add('you');
     if (teamsMode) chip.classList.add(i % 2 === 0 ? 'team-a' : 'team-b');
     return chip;
   }

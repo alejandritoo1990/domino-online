@@ -263,6 +263,49 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   font-size: 0.8em;
 }
 
+/* Mini-fichas físicas en chips de oponentes */
+.mini-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  max-width: 110px;
+}
+.mini-tile {
+  width: 14px;
+  height: 7px;
+  background: linear-gradient(145deg, #fbf6e1 0%, #ebe2c5 100%);
+  border: 1px solid #3a2d18;
+  border-radius: 1px;
+  flex-shrink: 0;
+  position: relative;
+  box-shadow:
+    0 1px 1px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.55);
+}
+.mini-tile::after {
+  /* Línea divisoria del medio (estilo dominó boca-abajo) */
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 1px;
+  right: 1px;
+  height: 1px;
+  background: rgba(58, 45, 24, 0.5);
+  transform: translateY(-0.5px);
+}
+
+/* En chips laterales (vertical), mini-fichas en grid wrap más compacto */
+.side-area .mini-tiles {
+  max-width: 100%;
+  gap: 1px;
+}
+.side-area .mini-tile {
+  width: 10px;
+  height: 5px;
+}
+
 /* ====== Hand section (mano del jugador) ====== */
 .hand-header {
   display: flex;
@@ -723,6 +766,8 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   .side-area .player-chip .pc-name { font-size: 0.95em; line-height: 1.1; }
   .side-area .player-chip .pc-tiles { font-size: 0.85em; }
   .side-area .player-chip .pc-score { font-size: 0.8em; padding: 0 0.3rem; }
+  .side-area .mini-tile { width: 8px; height: 4px; }
+  .top-area .mini-tile, .bottom-area .mini-tile { width: 12px; height: 6px; }
   /* Top y bottom siguen horizontales pero un toque más chicos. */
   .top-area .player-chip, .bottom-area .player-chip {
     font-size: 0.85rem;
@@ -739,10 +784,12 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
     font-size: 0.62rem;
     padding: 0.2rem 0.25rem;
   }
+  .side-area .mini-tile { width: 7px; height: 4px; }
   .top-area .player-chip, .bottom-area .player-chip {
     font-size: 0.78rem;
     padding: 0.25rem 0.55rem;
   }
+  .top-area .mini-tile, .bottom-area .mini-tile { width: 10px; height: 5px; }
 }
 
 @media (max-width: 380px) {
