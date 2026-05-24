@@ -352,7 +352,7 @@
 
       const tilesSpan = document.createElement('span');
       tilesSpan.className = 'pc-tiles';
-      tilesSpan.textContent = `${p.tilesLeft}f`;
+      tilesSpan.textContent = `${p.tilesLeft} fichas`;
 
       li.appendChild(nameSpan);
       li.appendChild(tilesSpan);
@@ -360,7 +360,7 @@
       if (p.score !== undefined) {
         const scoreSpan = document.createElement('span');
         scoreSpan.className = 'pc-score';
-        scoreSpan.textContent = p.score;
+        scoreSpan.textContent = `${p.score} pts`;
         li.appendChild(scoreSpan);
       }
 

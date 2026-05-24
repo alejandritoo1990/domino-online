@@ -273,7 +273,7 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   border: 1px solid #2a5a3a;
   border-radius: 10px;
   padding: 0;            /* el padding está dentro del cálculo de posiciones */
-  height: 460px;         /* tamaño fijo: cabe una partida completa sin crecer */
+  height: 360px;         /* tamaño fijo: cabe una partida completa sin crecer */
   max-width: 100%;
   line-height: 0;
   overflow: auto;
@@ -457,9 +457,9 @@ hr { border: none; border-top: 1px solid #444; margin: 1.2rem 0; }
   box-shadow:
     0 3px 5px rgba(0,0,0,0.45),
     inset 0 1px 0 rgba(255,255,255,0.7);
-  width: 42px;
-  height: 84px;
-  min-height: 84px;
+  width: 38px;
+  height: 76px;
+  min-height: 76px;
   display: inline-flex;
   flex-direction: column;
   flex-shrink: 0;
