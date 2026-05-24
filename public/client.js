@@ -199,8 +199,9 @@
     const { HW, HH, VW, VH, gap } = getTileDims();
     const padding = 14;
     const chainW = chainEl.clientWidth || 800;
+    const chainH = chainEl.clientHeight || 460;
     const maxX = chainW - padding;
-    const minX = padding;
+    const minBoundX = padding;
     // Offset vertical para que los dobles centrados (que se extienden VH/2
     // arriba y abajo de la línea media de la fila) entren sin recortarse.
     const dobleHalfExtra = (VH - HH) / 2;
@@ -226,11 +227,10 @@
       // ¿Esta ficha provocaría overflow → debe convertirse en corner V?
       let overflow = false;
       if (dir === 'right' && curX + tw > maxX) overflow = true;
-      if (dir === 'left'  && curX - tw < minX) overflow = true;
+      if (dir === 'left'  && curX - tw < minBoundX) overflow = true;
 
       if (overflow) {
-        // Esta ficha pasa a ser la corner vertical, pegada al extremo de la
-        // última ficha colocada.
+        // Esta ficha pasa a ser la corner vertical.
         tw = VW; th = VH; orient = 'v';
         const lastP = positions[positions.length - 1];
         let vx, vy;
@@ -239,15 +239,31 @@
         } else {
           vx = lastP.x;
         }
-        // La V se pega al borde inferior natural de la fila (no al bottom de
-        // un doble centrado), para que las cornerizadas siempre se alineen
-        // bien al "borde de la fila".
-        vy = curY + HH;
+        // V pegada al bottom real de la última ficha (sea normal H o doble
+        // perpendicular más alto). Así no se solapa con dobles centrados.
+        vy = lastP.y + lastP.th;
         positions.push({ tile, x: vx, y: vy, tw, th, orient, idx: i, flipped: false });
+
+        // ESCENARIO 1: si el corner es un doble, la siguiente ficha va
+        // también vertical debajo del doble (forma columna), y luego el
+        // chain continúa horizontal desde abajo de esa segunda vertical.
+        const cornerIsDouble = tile[0] === tile[1];
+        let nextRowY = vy + VH;
+        if (cornerIsDouble && i + 1 < chain.length) {
+          const extraTile = chain[i + 1];
+          positions.push({
+            tile: extraTile,
+            x: vx, y: vy + VH,
+            tw: VW, th: VH,
+            orient: 'v', idx: i + 1, flipped: false,
+          });
+          nextRowY = vy + 2 * VH;
+          i++;  // consumimos chain[i+1] aquí, el for-loop avanzará a chain[i+2]
+        }
 
         // Cursor para la siguiente fila (dirección opuesta).
         const newDir = (dir === 'right') ? 'left' : 'right';
-        curY = vy + VH;
+        curY = nextRowY;
         if (newDir === 'right') curX = vx;
         else                    curX = vx + VW;
         dir = newDir;
@@ -271,6 +287,24 @@
       if (dir === 'right') curX += tw + gap;
       else                 curX -= tw + gap;
       justAfterCorner = false;
+    }
+
+    // Centrar la cadena (bounding box) en la mesa horizontal y verticalmente.
+    if (positions.length > 0) {
+      let bbMinX = Infinity, bbMaxX = -Infinity;
+      let bbMinY = Infinity, bbMaxY = -Infinity;
+      positions.forEach(p => {
+        bbMinX = Math.min(bbMinX, p.x);
+        bbMaxX = Math.max(bbMaxX, p.x + p.tw);
+        bbMinY = Math.min(bbMinY, p.y);
+        bbMaxY = Math.max(bbMaxY, p.y + p.th);
+      });
+      const bbW = bbMaxX - bbMinX;
+      const bbH = bbMaxY - bbMinY;
+      // No empujamos fuera del padding si la cadena no cabe centrada.
+      const offsetX = Math.max(padding - bbMinX, (chainW - bbW) / 2 - bbMinX);
+      const offsetY = Math.max(padding - bbMinY, (chainH - bbH) / 2 - bbMinY);
+      positions.forEach(p => { p.x += offsetX; p.y += offsetY; });
     }
 
     // Renderizar cada ficha como absolutely-positioned.
